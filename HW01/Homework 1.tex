@@ -1,0 +1,218 @@
+\documentclass[12pt, letterpaper]{article}
+
+\input{C:/Users/MarEichler17/Documents/MYE-Documents/SCHOOL/Northwestern/preamble}
+ 
+
+
+
+ %line spacing
+ \usepackage{setspace}
+ \setstretch{1.2}
+ 
+ %header, pagestyle
+ \geometry{pass, letterpaper}
+ \pagestyle{fancy}
+ \fancyhf{} % sets both header and footer to nothing
+ \renewcommand{\headrulewidth}{0pt}
+ \lhead{STAT 457 Fall 2019 \\ Homework 01}
+ \rhead{Martha Eichlersmith \\ Page \thepage \text{ of} \pageref{LastPage}}
+ \setlength{\headsep}{48pt}
+ \renewcommand{\sectionmark}[1]{\gdef\currsection{\thesection \ #1}}
+ \renewcommand{\subsectionmark}[1]{\markright{\currsection\ $\mid$ \thesubsection \  #1}}
+
+
+
+\begin{document}
+1. Prove that $\Ex{ (X - \Ex{X})^2} = \Ex{X^2} - \left( \Ex{X} \right)^2$.  
+
+\begin{align*}
+\Ex{ \left( X- \Ex{X}^2 \right) } & = \Ex{ X^2 - 2 X \Ex{ X} + \Ex{ X}^2 }
+\\
+& = \Ex{ X^2} - 2 \Ex{X} \Ex{X} + \Ex{X}^2 
+\\
+& = \Ex{X^2} - 2 \Ex{X}^2 + \Ex{X}^2
+\\
+& = \Ex{X^2} - \Ex{X}^2
+\end{align*} \vspace{-48pt} \\ \qed 
+\vspace{12pt} 
+
+2. Prove that if $X_1$ and $X_2$ are independent, then $\Ex{X_1 X_2} = \Ex{X_1} \Ex{X_2}$. 
+ 
+\begin{align*}
+\omit\rlap{\underline{Continuous}}
+\\
+\Ex{ X_1 X_2} & = \int_{-\infty}^\infty x_1 x_2 p_{X_1 X_2} (x_1, x_2) dx_1 dx_2
+\\
+& = \int_{-\infty}^\infty x_1 x_2 p_{X_1}(x_1) p_{X_2} (x_2) dx_1 dx_2 
+&& X_1 \independent X_2 \implies p_{X_1 X_2} (x_1, x_2) = p_{X_1}(x_1) p_{X_2} (x_2)
+\\
+& = \int_{-\infty}^\infty x_1 p_{X_1}(x_1) d x_1
+\int_{-\infty}^\infty x_2 p_{X_2}(x_2) d x_2
+\\
+&= \Ex{ X_1 } \Ex{X_2 }
+\\[2ex]
+\omit\rlap{\underline{Discrete}} 
+\\
+\Ex{X_1 X_2} & = \sum_{x_1} \sum_{x_2} x_1 x_2 p_{X_1, X_2} (x_1, x_2) 
+\\
+& = \sum_{x_1} \sum_{x_2} x_1 x_2 p_{X_1} (x_1) p_{X_2}  x_2) 
+&&  X_1 \independent X_2 \implies p_{X_1 X_2} (x_1, x_2) = p_{X_1}(x_1) p_{X_2} (x_2)
+\\
+& = \left( \sum_{x_1} x_1 p_{X_1}(x_1) \right)
+\left( \sum_{x_2} x_2 p_{X_2}(x_2) \right)
+\end{align*} \vspace{-48pt} \\ \qed 
+ 
+\newpage 
+3. Prove that $\Var{X_1 + X_2} = \Var{X_1} + \Var{X_2} + 2\Cov{X_1, X_2}$, where $\Cov{X_1, X_2} = \Ex{ \left(X_1 - \Ex{X_1} \right) \left( X_2 - \Ex{ X_2} \right) } = \Ex{ X_1 X_2} - \Ex{X_1} \Ex{X_2}$. 
+
+\begin{align*}
+\Var{X_1 + X_2} &= \Ex{ (X_1 + X_2)^2} - \Ex{X_1 + X_2}^2 
+\\
+& = \Ex{ X_1^2 + 2 X_1 X_2 + X_2^2} - \left( \Ex{X_1} + \Ex{X_2} \right)^2 
+\\
+&= \Ex{X_1^2} + 2 \Ex{X_1 X_2} + \Ex{X_2^2} - \left( \Ex{X_1}^2 + 2 \Ex{X_1} \Ex{X_2} + \Ex{X_2}^2 \right)
+\\
+& = \Ex{X_1^2} + 2 \Ex{X_1 X_2} + \Ex{X_2^2} -  \Ex{X_1}^2 - 2 \Ex{X_1} \Ex{X_2} - \Ex{X_2}^2 
+\\
+& =
+\underbrace{ \Ex{X_1^2} - \Ex{X_1}^2 }_{\Var{X_1}} 
++ 
+\underbrace{ \Ex{X_2^2} - \Ex{X_2}^2}_{\Var{X_2}} 
++ 2 \cdot 
+\underbrace{ \left( \Ex{ X_1 X_2} - \Ex{X_1} \Ex{X_2} \right) }_{ \Cov{X_1, X_2}}
+\\
+& = \Var{X_1} + \Var{X_2} + 2 \Cov{X_1, X_2}
+\end{align*} \vspace{-48pt} \\ \qed 
+\vspace{12pt} 
+
+4. Prove or disprove via a counterexample: If $\Cor{X_1, X_2} = 0$ then $X_1$ and $X_2$ are independent 
+
+
+$\Cor{X_1, X_2} = 0 \implies \Cov{X_1, X_2} = 0 \implies \Ex{ X_1 X_2} = \Ex{X_1}\Ex{X_2}$ \\
+Need to find an example where $\Ex{ X_1 X_2} = \Ex{X_1}\Ex{X_2}$ but $X_1 \centernot\independent X_2$.   
+
+Let $X_1$ be a random variable with possible values of $-1, \ 1$ where \\
+$\pr(X_1 = -1) = \pr(X_2 = 1) = 0.5$ 
+
+Let $X_2$ be a random variable with possible values of $-1, \ 0, \ 1$ \\
+$X_2 = \begin{cases}
+0 & \text{if } X_1=-1 \\
+-1 \text{ or } 1 & \text{if } X_1 = 1 \text{ (both with probability 0.5)} 
+\end{cases}$ 
+
+Note that $X_2$ is dependent on $X_1$ 
+
+$
+\arraycolsep=1.4pt
+\begin{array}{r c l } 
+\Ex{X_1} &=& \sum_{x_1} x_1 p_{X_1}(x_1) 
+\\
+&=& -1 \cdot p_{X_1}(- 1) + 1 \cdot p_{X_1}(1)
+\\
+&=& -1 \cdot 0.5 + 1 \cdot 0.5 
+\\
+&=&
+0 
+\end{array}$ 
+\hfill 
+$
+\arraycolsep=1.4pt
+\begin{array}{r c l } 
+\Ex{X_2} &=& \sum_{x_2} x_2 p_{X_2}(x_2) 
+\\
+&=& 0 \cdot 
+\underbrace{p_{X_2}(0)}_{p_{X_1}(-1)}
+ + -1 \cdot 
+\underbrace{p_{X_2}(-1)}_{0.5 p_{X_1}(1)} + 1 \cdot 
+\underbrace{ p_{X_2}( 1)} _{0.5  p_{X_1}(1)} 
+\\
+&=& 0 \cdot 0.5  -1 \cdot 0.25 + 1 \cdot 0.25 
+\\
+&=&
+0 
+\end{array}$ 
+
+$
+\arraycolsep=1.4pt
+\begin{array}{r c l} 
+\Ex{X_1 X_2} &=& \sum_{x_1} \sum_{x_1} x_1 x_2 p_{X_1 X_2}(x_1, x_2) 
+\\
+&=&  
+-1 \cdot 0 \cdot \pr(X_1 = -1)
++
+1 \cdot -1 \cdot \pr(X_1 = 1, X_2 = -1)
++ 
+1 \cdot 1 \cdot \pr(X_1 = 1, X_2 = 1) 
+\\
+&=&
+0 + \pr(X_1 = 1, X_2 = -1) - \pr(X_1 = 1, X_2 = 1)
+\\
+&& \begin{footnotesize} \text{Note: $\pr(X_1 = 1, X_2 = -1) = \pr(X_1 = 1, X_2 = 1)$} \end{footnotesize}
+\\
+&=& 0 
+\end{array}$  
+
+$\Ex{X_1} \Ex{X_2} = \Ex{X_1 X_2} \implies \Cor{X_1, X_2} = 0$ but $X_1 \centernot\independent X_2$. \qed 
+
+\newpage 
+5. Let $f$ and $g$ be non-decreasing on $\R$.  Assume that $\Ex{g^2(X)} < \infty$ and $\Ex{ f^2(X)} < \infty$.  Show $\Cov{ f(X), g(X)} \geq 0$.  Hint: Let $Y$ be independent of $X$, with the same distribution as $X$. Consider $\Ex{ \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} }$. 
+
+\begin{align*}
+X \independent Y & \quad X, Y \text{ are from the same distribution}
+\\
+\omit\rlap{ Look at $\left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\}$}
+\\[1ex]
+\omit\rlap{Option 1: $X < Y$}
+\\
+\left.
+\arraycolsep=1.4pt
+\begin{array}{r c l}
+g(X) - g(Y) &\leq& 0 \\
+f(X) - f(Y) &\leq& 0
+\end{array}
+\right\}
+& \implies \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} \geq 0 
+\\[1ex]
+\omit\rlap{Option 2: $X = Y$}
+\\
+\left.
+\arraycolsep=1.4pt
+\begin{array}{r c l}
+g(X) - g(Y) &=& 0 \\
+f(X) - f(Y) &=& 0
+\end{array}
+\right\}
+& \implies \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} = 0 
+\\[1ex]
+\omit\rlap{Option 3: $X > Y$}
+\\
+\left.
+\arraycolsep=1.4pt
+\begin{array}{r c l}
+g(X) - g(Y) &\geq& 0 \\
+f(X) - f(Y) &\geq& 0
+\end{array}
+\right\}
+& \implies \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} \geq 0 
+\\[1ex]
+\implies \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} &\geq 0  
+\\
+\implies \Ex{ \left\{ g(X) - g(Y) \right\} \left\{ f(X) - f(Y) \right\} }
+& \geq 0 
+\\[2ex]
+\omit\rlap{Let $g(Y) = \Ex{g(X)}$ and $f(Y) = \Ex{f(X)}$}
+\\
+\Ex{ \left\{ g(X) - \Ex{g(X)} \right\} \left\{ f(X) - \Ex{f(X)} \right\} }
+& \geq 0 
+\\
+\Cov{ f(X), g(X)} & \geq 0 
+\end{align*} \vspace{-48pt} \\ \qed 
+
+
+\end{document}
+
+
+
+%  \text{\textcolor{red}{$$}}
+%  \text{\textcolor{blue}{$$}}
+%  \text{\textcolor{Green}{$$}}

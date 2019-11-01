@@ -1,0 +1,454 @@
+---
+title: STAT 457 Homework 04
+author: Martha Eichlersmith
+date: 2019-11-05
+output:
+  pdf_document:
+    fig_caption: yes
+header-includes:
+  - \usepackage{color}
+  - \usepackage{mathtools}
+  - \usepackage{amsbsy} #bold in mathmode
+  - \usepackage{nicefrac} # for nice fracs 
+---
+```{r, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+library(ggplot2) #ggplot
+library(readr) #import CSV
+library(gridExtra) #organize plots
+library(grid) #organize plots
+library(latex2exp) #latex in ggplot titles 
+library(knitr) #to help make tables 
+library(matlib) #A = matrix, inv(A) = A^{-1} 
+library(numDeriv) #calculate numerical first and second order derivatives 
+decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
+dec <- 5
+```
+
+## Problem 1  
+Let $y_1, \cdots, y_n$ be an iid sample from the Poisson distriubtion with parameter $\lambda$.  Derive Jeffrey's (noninformative) prior.  This prior corresponds to the gamma distribution with which parameters? 
+
+$$
+\begin{aligned}
+L(\lambda \mid Y) & = \frac{ \lambda^y e^{-\lambda}}{y!}
+\propto \lambda^y e^{-\lambda}
+\\[.5ex]
+\ell(\lambda \mid Y) & = y \log \lambda - \lambda 
+\\[.5ex]
+\frac{\partial \ell(\lambda \mid Y)}{\partial \lambda }
+& = \frac{y}{\lambda} - 1
+\\[.5ex]
+\frac{\partial^2 \ell(\lambda \mid Y)}{\partial \lambda^2}
+& = - \frac{y}{\lambda^2} 
+\\[.5ex]
+\mathcal{I}(\lambda) & = \mathbb{E} \left[
+- \frac{\partial^2 \ell(\lambda \mid Y)}{\partial \lambda^2}
+\right]
+\\[.5ex]
+& = \mathbb{E} \left[ \frac{y}{\lambda^2}
+\right]
+\\[.5ex]
+& = \frac{1}{\lambda}
+\\[1ex]
+\text{Jeffrey's Prior }\quad p(\lambda) & = \sqrt{\mathcal{I}(\lambda)} = \sqrt{ \frac{1}{\lambda}} \approx \text{Gamma}\left( \frac{1}{2}, 0 \right)
+\end{aligned}
+$$
+
+## Probelm 2  
+In the multivariate setting, $\theta = (\theta_1, \cdots, \theta_d), \ p(\theta)  \propto \left| J(\theta) \right|^{\nicefrac{1}{2}}$, provides an invariant prior where the $ij^{\text{th}}$ entry of $J(\theta)$ is equal to  
+$$
+- \mathbb{E} \left[ \frac{ \partial^2 \ell (\theta \mid Y)}{ \partial \theta_i \partial \theta_j }
+\right]
+$$
+and $|X|$ is the determinant of the matrix $X$.  
+
+Let $y_1, \cdots, y_n$ be an iid sample from the $\mathcal{N}(\mu, \sigma^2)$ distribution, where $\mu$ and $\sigma$ are both unknown.  Derive the invariant prior.  How does it compare with the prior $p(\theta, \sigma^2) \propto \nicefrac{1}{\sigma^2}$? 
+
+[OUTSTANDING ]
+
+## Problem 3
+Let $p$ denote the probability that a specific major league baseball player will get a hit in a particular at bat.  Assume that batting averages ususally fall in the range .19 to .35.  
+
+### Problem 3a  
+Consider the priors Uniform(.19, .35); Beta(10.2, 23.8); and Beta(20.4,47.6).  Plot these priors and discuss each choice.  
+
+```{r, echo=FALSE, fig.width=10, fig.height=4}
+mu.uniform <- .5*(.19+.35)
+sig2.uniform <- (1/12)*(.35-.19)^2
+mu.beta1 <- 10.2/(10.2+23.8)
+mu.beta2 <- 20.4/(20.4+47.6)
+sig2.beta1 <- (10.2*23.8)/( (10.2+23.8)^2 * (10.2+23.8+1) )  
+sig2.beta2 <- (20.4*47.6)/( (10.4+47.6)^2 * (20.4+47.6+1) )
+dist <- c("Uniform(.19, .35)", "Beta(10.2, 23.8)", "Beta(20.4, 47.6)")
+mean <- c(mu.uniform, mu.beta1, mu.beta2)
+var <- decimal(c(sig2.uniform, sig2.beta1, sig2.beta2), dec)
+colors <- c("darkgrey", "navy", "maroon")
+line <- c("solid","dashed", "dotted")
+Uniform <- stat_function(fun = dunif, args = list(   min=0.19,    max=0.35), lwd = 2, aes(col=dist[1], linetype=dist[1]))
+Beta1 <-   stat_function(fun = dbeta, args = list(shape1=10.2, shape2=23.8), lwd = 2, aes(col=dist[2], linetype=dist[2]))
+Beta2 <-   stat_function(fun = dbeta, args = list(shape1=20.4, shape2=47.6), lwd = 2, aes(col=dist[3], linetype=dist[3]))
+compare <- data.frame("Distribution"=dist, "Mean"=mean, "Variance"=var)
+
+tg <- tableGrob(compare)
+font.vec <- c(2,3,4)
+bg.vec <- c(6,7,8)
+for (i in 1:3) tg$grobs[[font.vec[i]]] <- editGrob(tg$grobs[[font.vec[i]]], gp=gpar(col=colors[i]))
+for (i in 1:3) tg$grobs[[bg.vec[i]]] <- editGrob(tg$grobs[[bg.vec[i]]], gp=gpar(fill=colors[i]))
+x <- seq(0,1, len=100)
+qplot(x, geom="blank")+
+  annotation_custom(tg, xmin=0.4, ymin=1)+
+  Uniform+Beta1+Beta2+
+  ggtitle("Graph of Priors")+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[3], colors[2], colors[1])) +
+  scale_linetype_manual("", values=c(line[3], line[2], line[1])) +
+  theme(legend.position = "bottom")
+```
+
+The Uniform has a mean of 0.27 and both beta distributions have a mean of 0.30.  The uniform distribuiton has the lowest variance and a block shape.  The Beta(10.2,23.8) has the highest variance and a lower peak than the Beta(20.4,47.6).
+
+\newpage  
+### Problem 3b  
+Suppose a player gets 5 hits in 40 at-bats.  For each of the above priors: plot the likelihood, posterior and prior; compute the probability that he player is better than a .200 hitter; compute your best guess as to the batting average of the player; compute a 95% credible interval for $p$.  
+
+```{r, echo=FALSE }
+dist <- c("Likelihood", "Posterior", "Prior")
+colors <- c("darkgrey", "navy", "maroon")
+
+p <- 5/40
+n <- 40
+it <- 10000
+Binomial.Likelihood <- data.frame("L"=rbinom(it, 1, p))
+
+func_distplot <- function(Likelihood, prior, posterior, a, b, name){
+plot1 <- ggplot(Likelihood, aes(L))+geom_density(aes(y=..density..,  col=dist[1]), lwd=1.5)+
+  xlim(0, 1) + ylim(0, 8)+
+  prior+posterior+
+  ggtitle(paste(name))+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[1], colors[2], colors[3])) +
+  theme(legend.position = "bottom")
+
+x <- seq(0,1, len=100)
+y <- dbeta(x, a, b)
+pval <- 1-pbeta(0.200, a, b)
+CI.up <- qbeta(0.975, a, b)
+CI.low <- qbeta(0.025, a,b)
+df <- data.frame("x"=x, "y"=y)
+
+
+plot2 <- ggplot(df, aes(x, y))+ geom_line(lwd = 1.5, linetype="dotted", aes(col=dist[2]))+
+  geom_ribbon(data=subset(df, x>0.2), aes(ymax=y), ymin=0, fill=colors[2], color=NA, alpha=0.4)+
+  annotate("text", x=0.3, y=5, label=paste("P(X > 0.200 | Y):", decimal(pval, dec)), hjust=0, size=5)+
+  annotate("text", x=0.3, y=6, label=paste("CI: (", decimal(CI.low, dec), ",", decimal(CI.up, dec), ")"), size=5, hjust=0)+
+  ggtitle("Probability X > 0.200, Credible Interval")+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[2])) +
+  theme(legend.position = "bottom")
+
+grid.arrange(plot1, plot2, nrow=1)
+}
+```
+
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+#UNIFORM PRIOR uniform(0.19,0.35) 
+a <- 5+0.19
+b <- 40-5+0.35
+prior <-    stat_function(fun = dunif, args = list(min=0.19,max=0.35), lwd = 1.5, linetype="dashed", aes(col=dist[3]))
+posterior <-stat_function(fun = dbeta, args = list(shape1=a, shape2=b), lwd = 1.5, linetype="dotted", aes(col=dist[2])) 
+func_distplot(Binomial.Likelihood, prior, posterior, a, b, "Uniform(.19, .35) Prior")
+```
+
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+#BETA PRIOR Beta(10.2,23.8)
+n <- 40
+y <- 5
+a0 <- 10.2
+b0 <- 23.8
+a <- y + a0
+b <- n - y + b0
+prior <-    stat_function(fun = dbeta, args = list(shape1=a0, shape2=b0), lwd = 1.5, linetype="dashed",  aes(col=dist[3]))
+posterior <-stat_function(fun = dbeta, args = list(shape1=a, shape2=b), lwd = 1.5, linetype="dotted",  aes(col=dist[2]))
+func_distplot(Binomial.Likelihood, prior, posterior, a, b, "Beta(10.2, 23.8) Prior, Binomial Likelihood, Beta Posterior")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+#BETA PRIOR Beta(20.4,47.6)
+n <- 40
+y <- 5
+a0 <- 20.4
+b0 <- 47.6
+a <- y + a0
+b <- n - y + b0
+prior <-    stat_function(fun = dbeta, args = list(shape1=a0, shape2=b0), lwd = 1.5, linetype="dashed", aes(col=dist[3]))
+posterior <-stat_function(fun = dbeta, args = list(shape1=a, shape2=b), lwd = 1.5, linetype="dotted",  aes(col=dist[2]))
+func_distplot(Binomial.Likelihood, prior, posterior, a, b, "Beta(20.4, 47.6) Prior, Binomial Likelihood, Beta Posterior")
+```
+
+\newpage  
+### Problem 3c  
+Look at the Cubs during the 2019 MLB season.  As of the allstar break on 7/7/2019 the Cubs had win/loss record of 47/42 (played 89 games).  In the remaining 73 games, i.e. the rest of the regular season, predict how many games the cubs will win.  Note: the actual final win/loss record for the 2019 Cubs was 84/78
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+set.seed(040303)
+dist <- c("Likelihood", "Posterior", "Prior")
+colors <- c("darkgrey", "navy", "maroon")
+
+g0 <- 89 #number of games played 
+n0 <- 47 #number of games won 
+p0 <- n0/g0
+g1 <- 73 #remaining games 
+it <- 1000
+Binomial.Likelihood <- data.frame("L"=rbinom(it, 162, p0))/162 #random gen for est games won in next 73 games
+
+func_distplot3c <- function(Likelihood, a0, b0, name){
+  
+a <- n0 + a0
+b <- g0 - n0 + b0
+prior <-    stat_function(fun = dbeta, args = list(shape1=a0, shape2=b0), lwd = 1.5, linetype="dashed", aes(col=dist[3]))
+posterior <-stat_function(fun = dbeta, args = list(shape1=a, shape2=b), lwd = 1.5, linetype="dotted",  aes(col=dist[2]))
+
+mean.post <- a/(a + b)
+mode.post <- (a - 1)/(a + b - 2)
+med.post <- (a - (1/3))/(a + b - 2/3)
+
+stat <- c("Mean", "Mode", "Est. Median")
+stat.val <- c(mean.post, mode.post, med.post)
+est.games <- stat.val*162 #total games played is 162
+actual.games <- rep(84, 3) #actual games won = 89
+difference <- actual.games - est.games 
+labels <- c("Posterior Value", "Est Games Won", "Actual Games Won", "Difference")
+vec.blank <- rep(NA, length(labels))
+compare <- data.frame("Mean"=vec.blank, "Mode"=vec.blank, "Est. Median" = vec.blank)
+for (i in 1:3){ 
+compare[,i] <- c(
+                 decimal(stat.val[i], dec), 
+                 decimal(est.games[i], 3), 
+                 actual.games[i],
+                 decimal(difference[i], 3)
+                 )
+}
+
+rownames(compare) <- labels 
+
+plot <- ggplot(Likelihood, aes(L))+geom_density(aes(y=..density..,  col=dist[1]), lwd=1.5)+
+  xlim(0, 1) + 
+  prior+posterior+
+  ggtitle(paste(name))+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[1], colors[2], colors[3])) +
+  theme(legend.position = "bottom")
+table <- tableGrob(compare)
+grid.arrange(plot, table, nrow=1)
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+a0 <- 1
+b0 <- 1
+func_distplot3c(Binomial.Likelihood, a0, b0, "Bayes Prior: Beta(1, 1)")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+a0 <- .5
+b0 <- .5
+func_distplot3c(Binomial.Likelihood, a0, b0, "Jeffrey's Prior: Beta(1, 1)")
+```
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+a0 <- 0
+b0 <- 0
+func_distplot3c(Binomial.Likelihood, a0, b0, "Heldane's Prior: Beta(1, 1)")
+```
+
+
+
+\newpage  
+## Problem 4  
+The following data represents the number of arrivals for 45 time intervals of length 2 minutes at a cashier's desk at a supermarket and are taken from Andersen (1980): 
+```{r}
+Arrival <- c(rep(0,6), rep(1,18), rep(2,9), rep(3,7), rep(4, 4), rep(5, 1))
+```
+
+### Problem 4a
+For a Gamma(2,1) prior, obtain the posterior distribution under a Poisson ($\lambda$) model for the data.  Draw the prior and the posterior.  Note on your plot the mean, variance and mode of the posterior.  
+```{r, echo=FALSE, fig.width=10, fig.height=4}
+dist <- c("Likelihood", "Posterior", "Prior")
+colors <- c("darkgrey", "navy", "maroon")
+n <- length(Arrival)
+a0 <- 2
+b0 <- 1
+a <- sum(Arrival) + a0
+b <- n + b0
+lam <- mean(Arrival)
+prior <- stat_function(fun = dgamma, args = list(shape=a0,rate=b0), lwd = 1.5, aes(col=dist[3], linetype=dist[3])) 
+posterior <-   stat_function(fun = dgamma, args = list(shape=a, rate=b), lwd = 1.5, aes(col=dist[2], linetype=dist[2])) 
+
+mean.post <- a/b
+var.post <- a/b^2
+mode.post <- (a-1)/b
+
+it <- 10000
+Poisson.Likelihood <- data.frame("L"=rpois(it, lambda=lam))
+
+ ggplot(Poisson.Likelihood, aes(L))+
+  #geom_density(aes(y=..density..), lwd=1, col=colors[1])+
+  prior+posterior+
+  ggtitle("Gamma(2,1) Prior, Poisson Likelihood, Gamma Posterior")+
+  geom_point(aes(x=mode.post, y=dgamma(mode.post, a, b)), size=2, shape=21, color="grey45", fill="grey45", stroke=1.5)+
+   annotate("text", x=mode.post, y=dgamma(mode.post, a, b), label=paste("Mode:", decimal(mode.post, dec)), hjust=1.1, size=5, color="grey45", fontface="bold")+
+     geom_point(aes(x=mean.post, y=dgamma(mean.post, a, b)), size=2, shape=22, color="grey35", stroke=1.5)+
+   annotate("text", x=mean.post, y=dgamma(mean.post, a, b), label=paste("Mean:", decimal(mean.post, dec)), hjust=-.1, size=5.5, color="grey35", fontface="bold")+
+   annotate("text", x=2, y=dgamma(2, a, b), label=paste("Variance:", decimal(var.post, dec)), hjust=-.1, size=5, fontface="bold")+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[2], colors[3])) + scale_linetype_manual("", values = c("dotted", "dashed"))+
+  theme(legend.position = "bottom")
+```
+
+
+### Problem 4b  
+For the noninformative prior, i.e. a Gamma(?, ?), repeat part a.  
+```{r, echo=FALSE, fig.width=10, fig.height=4}
+dist <- c("Likelihood", "Posterior", "Prior")
+colors <- c("darkgrey", "navy", "maroon")
+n <- length(Arrival)
+a0 <- 0.5
+b0 <- 0.00001
+a <- sum(Arrival) + a0
+b <- n + b0
+lam <- mean(Arrival)
+prior <- stat_function(fun = dgamma, args = list(shape=a0,rate=b0), lwd = 1.5, aes(col=dist[3], linetype=dist[3])) 
+posterior <-   stat_function(fun = dgamma, args = list(shape=a, rate=b), lwd = 1.5, aes(col=dist[2], linetype=dist[2])) 
+
+mean.post <- a/b
+var.post <- a/b^2
+mode.post <- (a-1)/b
+
+ ggplot(Poisson.Likelihood, aes(L))+
+  prior+posterior+
+  ggtitle("Gamma(.5, .00001) Prior, Poisson Likelihood, Gamma Posterior")+
+  geom_point(aes(x=mode.post, y=dgamma(mode.post, a, b)), size=2, shape=21, color="grey45", stroke=1.5)+
+   annotate("text", x=mode.post, y=dgamma(mode.post, a, b), label=paste("Mode:", decimal(mode.post, dec)), hjust=1.1, size=5, color="grey45", fontface="bold")+
+  geom_point(aes(x=mean.post, y=dgamma(mean.post, a, b)), size=2, shape=22, color="grey35", stroke=1.5)+
+   annotate("text", x=mean.post, y=dgamma(mean.post, a, b), label=paste("Mean:", decimal(mean.post, dec)), hjust=-.1, size=5.5, color="grey35", fontface="bold")+
+   annotate("text", x=2, y=dgamma(2, a, b), label=paste("Variance:", decimal(var.post, dec)), hjust=-.1, size=5, fontface="bold")+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[2], colors[3])) + scale_linetype_manual("", values = c("dotted", "dashed"))+
+  theme(legend.position = "bottom")
+```
+
+
+\newpage  
+## Problem 5  
+197 animals are distributed into four categories: $Y = (y_1, y_2, y_3, y_4)$ according ot the genetic linkage model $\left( \frac{2 + \theta}{4},  \frac{1 - \theta}{4}, \frac{ 1 - \theta}{4}, \frac{\theta}{4}   \right)$
+
+$$
+\begin{aligned}
+ & \quad \left( \frac{2 + \theta}{4},  \frac{1 - \theta}{4}, \frac{ 1 - \theta}{4}, \frac{\theta}{4}   \right)
+ \\
+ \ell(\theta \mid Y) & = \log(2+ \theta) - \log(4) + 2\log(1 - \theta) - 2\log(4) + \log(\theta) - \log(4)
+ \\
+ \frac{\partial \ell (\theta \mid Y)}{\partial \theta)} & = \frac{1}{2 + \theta} + \frac{2}{1 - \theta} + \frac{1}{\theta} 
+ \\
+ \frac{\partial^2 \ell (\theta \mid Y)}{\partial \theta^2)} & = - \frac{1}{(2 + \theta)^2} - \frac{2}{(1 - \theta)^2} - \frac{1}{\theta^2} 
+ \\
+ \theta^{(i+1)} & = \frac{ 
+  \frac{1}{2 + \theta^{(i)}} + \frac{2}{1 - \theta^{(i)}} + \frac{1}{\theta^{(i)}} 
+  }{
+  - \frac{1}{(2 + \theta^{(i)})^2} - \frac{2}{(1 - \theta^{(i)})^2} - \frac{1}{(\theta^{(i)})^2}
+  }
+\end{aligned} 
+$$
+[outstanding!!]  
+
+```{r, echo=FALSE}
+func_newton.raphson <- function(f, start, it, tol){
+  x0 <- start
+  k <- c()
+  for (i in 1:it) {
+    x1 <- x0 - f(x0) #calcualte next value x1
+    k[i] <- x1 #store x1 
+    root.approx <- tail(k, n=1)
+    it.completed <- length(k) 
+    # Once the difference between x0 and x1 becomes sufficiently small, output the results.
+    if (abs(x1 - x0) < tol & !is.na(abs(x1- x0)))
+      {print(paste("Start at", start, ": Root apporixmation is", root.approx, "with", it.completed, "iterations")) 
+      break} 
+    else if( it.completed == it){print(paste("Start at", start, ": diverges"))} 
+    else{ x0 <- x1}
+  }
+}
+tol <- 1e-5
+it <- 1000
+```
+
+
+### Problem 5a  
+What is the likelihood for the data $Y = (125, 18, 20, 34)$?  
+$$
+\theta^{(i+1)} =  - \frac{ 
+  \frac{125}{2 + x} - \frac{ 38}{1 - x} + \frac{34}{x}
+  }{
+  \frac{125}{(2 + x)^2} + \frac{38}{(1 - x)^2} + \frac{34}{x^2} 
+  }
+$$
+[outstanding!!]    
+```{r, echo=FALSE}
+func_a<-function(x){
+  -(125/(2+x)-38/(1-x)+34/x)/(125/(2+x)^2+38/(1-x)^2+34/x^2)
+}
+```
+
+
+### Problem 5b  
+What is the likelihood for the data $Y = (14, 0, 1, 5)$?  
+$$
+L(\theta \mid Y) = - \frac{ 
+  \frac{14}{2 + x} - \frac{ 1}{1 - x} + \frac{5}{x}
+  }{
+  \frac{14}{(2 + x)^2} + \frac{1}{(1 - x)^2} + \frac{5}{x^2} 
+  }
+$$
+[outstanding!!]  
+
+```{r, echo=FALSE }
+func_b<-function(x){
+  -(14/(2+x)-1/(1-x)+5/x)/(14/(2+x)^2+1/(1-x)^2+5/x^2)
+}
+```
+
+
+### Problem 5c  
+Use th Newton-Raphson algorithm to obtain the MLE $(\hat{\theta})$ of $\theta$ for $Y = (125, 18, 20, 34)$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6, .8$.  How do you assess convergence of the algorithm.  
+
+```{r, echo=FALSE}
+func_newton.raphson(func_a, 0.1, it, tol)
+func_newton.raphson(func_a, 0.2, it, tol)
+func_newton.raphson(func_a, 0.3, it, tol)
+func_newton.raphson(func_a, 0.4, it, tol)
+func_newton.raphson(func_a, 0.6, it, tol)
+func_newton.raphson(func_a, 0.8, it, tol)
+```
+
+
+### Problem 5d  
+Repeat 5c for $Y = (14, 0, 1, 15)$.  
+```{r, echo=FALSE}
+func_newton.raphson(func_b, 0.1, it, tol)
+func_newton.raphson(func_b, 0.2, it, tol)
+func_newton.raphson(func_b, 0.3, it, tol)
+func_newton.raphson(func_b, 0.4, it, tol)
+func_newton.raphson(func_b, 0.6, it, tol)
+func_newton.raphson(func_b, 0.8, it, tol)
+```
+
+
+
+
+
+
+
+
+
+
