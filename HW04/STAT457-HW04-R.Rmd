@@ -25,7 +25,7 @@ dec <- 5
 ```
 
 ## Problem 1  
-Let $y_1, \cdots, y_n$ be an iid sample from the Poisson distriubtion with parameter $\lambda$.  Derive Jeffrey's (noninformative) prior.  This prior corresponds to the gamma distribution with which parameters? 
+Let $y_1, \cdots, y_n$ be an iid sample from the Poisson distribution with parameter $\lambda$.  Derive Jeffery's (noninformative) prior.  This prior corresponds to the gamma distribution with which parameters? 
 
 $$
 \begin{aligned}
@@ -52,8 +52,9 @@ L(\lambda \mid Y) & = \frac{ \lambda^y e^{-\lambda}}{y!}
 \text{Jeffrey's Prior }\quad p(\lambda) & = \sqrt{\mathcal{I}(\lambda)} = \sqrt{ \frac{1}{\lambda}} \approx \text{Gamma}\left( \frac{1}{2}, 0 \right)
 \end{aligned}
 $$
-
-## Probelm 2  
+  
+\newpage  
+## Problem 2  
 In the multivariate setting, $\theta = (\theta_1, \cdots, \theta_d), \ p(\theta)  \propto \left| J(\theta) \right|^{\nicefrac{1}{2}}$, provides an invariant prior where the $ij^{\text{th}}$ entry of $J(\theta)$ is equal to  
 $$
 - \mathbb{E} \left[ \frac{ \partial^2 \ell (\theta \mid Y)}{ \partial \theta_i \partial \theta_j }
@@ -63,10 +64,36 @@ and $|X|$ is the determinant of the matrix $X$.
 
 Let $y_1, \cdots, y_n$ be an iid sample from the $\mathcal{N}(\mu, \sigma^2)$ distribution, where $\mu$ and $\sigma$ are both unknown.  Derive the invariant prior.  How does it compare with the prior $p(\theta, \sigma^2) \propto \nicefrac{1}{\sigma^2}$? 
 
-[OUTSTANDING ]
+$$
+\begin{aligned}
+L(\mu, \sigma^2 \mid \pmb{Y}) & = \prod_{i=1}^n \frac{ 1}{\sqrt{ 2 \pi \sigma^2}} \exp \left\{ \frac{ (y_i - \mu)^2}{2 \sigma^2}  \right\}
+\\[.5ex]
+\ell (\mu, \sigma^2 \mid \pmb{Y}) & = \log \left( \prod_{i=1}^n \frac{ 1}{\sqrt{ 2 \pi \sigma^2}} \exp \left\{ \frac{ (y_i - \mu)^2}{2 \sigma^2}  \right\} \right)
+\\[.5ex]
+& = - \frac{n}{2} \log (2 \pi) - \frac{n}{2} \log (\sigma^2) - \frac{ \sum_i (y_i - \mu)^2}{2 \sigma^2}
+\\[.5ex]
+\frac{\partial^2 \ell}{\partial \mu^2} & = - \frac{n}{\sigma^2} 
+\\[.5ex]
+\frac{\partial^2 \ell}{\partial \mu \partial \sigma^2} & = -  \frac{ \sum_i (y_i - \mu)^2}{\sigma^4} = \frac{ \partial^2 \ell}{\partial \sigma^2 \partial \mu}
+\\[.5ex]
+\frac{ \partial^2 \ell}{\partial (\sigma^2)^2 } & = \frac{n}{\sigma^2} = \frac{n}{2 \sigma^4} - \frac{ \sum_i (y_i - \mu)^2}{\sigma^6}
+\\[1ex]
+p(\mu, \sigma^2) & \propto | J(\mu, \sigma^2) |^{\frac{1}{2}}
+\\[.5ex] & = \left(
+- \frac{1}{n} \text{det} \begin{bmatrix} 
+-\nicefrac{n}{\sigma^2} & 0 \\
+0 & - \nicefrac{n}{2 \sigma^4} 
+\end{bmatrix}
+\right)^{\frac{1}{2}}
+\\[.5ex]
+& = \frac{1}{\sigma^3} 
+\end{aligned}
+$$
+This is different than commonly used prior of $\nicefrac{1}{\sigma^2}$.  This shows that the Jeffery's prior does not work in every situation.  
 
+\newpage  
 ## Problem 3
-Let $p$ denote the probability that a specific major league baseball player will get a hit in a particular at bat.  Assume that batting averages ususally fall in the range .19 to .35.  
+Let $p$ denote the probability that a specific major league baseball player will get a hit in a particular at bat.  Assume that batting averages usually fall in the range .19 to .35.  
 
 ### Problem 3a  
 Consider the priors Uniform(.19, .35); Beta(10.2, 23.8); and Beta(20.4,47.6).  Plot these priors and discuss each choice.  
@@ -104,7 +131,7 @@ qplot(x, geom="blank")+
   theme(legend.position = "bottom")
 ```
 
-The Uniform has a mean of 0.27 and both beta distributions have a mean of 0.30.  The uniform distribuiton has the lowest variance and a block shape.  The Beta(10.2,23.8) has the highest variance and a lower peak than the Beta(20.4,47.6).
+The Uniform has a mean of 0.27 and both beta distributions have a mean of 0.30.  The uniform distribution has the lowest variance and a block shape.  The Beta(10.2,23.8) has the highest variance and a lower peak than the Beta(20.4,47.6).
 
 \newpage  
 ### Problem 3b  
@@ -253,13 +280,13 @@ func_distplot3c(Binomial.Likelihood, a0, b0, "Bayes Prior: Beta(1, 1)")
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
 a0 <- .5
 b0 <- .5
-func_distplot3c(Binomial.Likelihood, a0, b0, "Jeffrey's Prior: Beta(1, 1)")
+func_distplot3c(Binomial.Likelihood, a0, b0, "Jeffery's Prior: Beta(1, 1)")
 ```
 
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
 a0 <- 0
 b0 <- 0
-func_distplot3c(Binomial.Likelihood, a0, b0, "Heldane's Prior: Beta(1, 1)")
+func_distplot3c(Binomial.Likelihood, a0, b0, "Haldane's Prior: Beta(1, 1)")
 ```
 
 
@@ -373,7 +400,7 @@ func_newton.raphson <- function(f, start, it, tol){
     it.completed <- length(k) 
     # Once the difference between x0 and x1 becomes sufficiently small, output the results.
     if (abs(x1 - x0) < tol & !is.na(abs(x1- x0)))
-      {print(paste("Start at", start, ": Root apporixmation is", root.approx, "with", it.completed, "iterations")) 
+      {print(paste("Start at", start, ": Root approximation is", root.approx, "with", it.completed, "iterations")) 
       break} 
     else if( it.completed == it){print(paste("Start at", start, ": diverges"))} 
     else{ x0 <- x1}
