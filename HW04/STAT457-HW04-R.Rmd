@@ -137,7 +137,7 @@ The Uniform has a mean of 0.27 and both beta distributions have a mean of 0.30. 
 ### Problem 3b  
 Suppose a player gets 5 hits in 40 at-bats.  For each of the above priors: plot the likelihood, posterior and prior; compute the probability that he player is better than a .200 hitter; compute your best guess as to the batting average of the player; compute a 95% credible interval for $p$.  
 
-```{r, echo=FALSE }
+```{r, echo=FALSE}
 dist <- c("Likelihood", "Posterior", "Prior")
 colors <- c("darkgrey", "navy", "maroon")
 
@@ -178,13 +178,76 @@ grid.arrange(plot1, plot2, nrow=1)
 
 
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
-#UNIFORM PRIOR uniform(0.19,0.35) 
+
 a <- 5+0.19
 b <- 40-5+0.35
+
+func_dpost3b <- function(x){dunif(x, .19, .35)*dbeta(x, shape1=a, shape2=b)}
+func_ppost3b <- function(x){punif(x, .19, .35)*pbeta(x, shape1=a, shape2=b)}
+func_postdist <- function(x){dunif(x, .19, .35)*dbeta(x, shape1=a, shape2=b)}
 prior <-    stat_function(fun = dunif, args = list(min=0.19,max=0.35), lwd = 1.5, linetype="dashed", aes(col=dist[3]))
-posterior <-stat_function(fun = dbeta, args = list(shape1=a, shape2=b), lwd = 1.5, linetype="dotted", aes(col=dist[2])) 
-func_distplot(Binomial.Likelihood, prior, posterior, a, b, "Uniform(.19, .35) Prior")
+posterior <-stat_function(fun = func_postdist,  lwd = 1.5, linetype="dotted", aes(col=dist[2]))
+
+set.seed(040302)
+x.sim <- seq(.19, .35, length=1000)
+y.sim <- func_post3b(x.sim)
+df <- data.frame("Xsim" = x.sim, "Ysim"=y.sim)
+x.max <- df$Xsim[Ysim=max(y.sim)]
+
+
+plot1 <- ggplot(Binomial.Likelihood, aes(L))+geom_density(aes(y=..density..,  col=dist[1]), lwd=1.5)+
+  xlim(0, 1) + ylim(0, 20)+
+  prior+posterior+
+  ggtitle(paste("Unifrom(.19, .35) Prior, Binomial Likelihood, Beta Posterior"))+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[1], colors[2], colors[3])) +
+  theme(legend.position = "bottom")
+
+
+val <- length(data.sim[data.sim >= 0.200]) / length(data.sim) 
+CI.low <-quantile(data.sim, .025)
+CI.up <- quantile(data.sim, .975)
+#df <- data.frame("x"=x, "y"=y)
+
+
+
+
+
+
+
+
+
+
+plot2 <- ggplot(df, aes(Xsim, Ysim))+ geom_line(lwd = 1.5, linetype="dotted", aes(col=dist[2]))+
+  geom_ribbon(data=subset(df, Xsim>0.2), aes(ymax=Ysim), ymin=0, fill=colors[2], color=NA, alpha=0.4)+
+  annotate("text", x=0.3, y=5, label=paste("P(X > 0.200 | Y):", decimal(pval, dec)), hjust=0, size=5)+
+  annotate("text", x=0.3, y=8, label=paste("CI: (", decimal(CI.low, dec), ",", decimal(CI.up, dec), ")"), size=5, hjust=0)+
+  ggtitle("Probability X > 0.200, Credible Interval")+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[2])) +
+  theme(legend.position = "bottom")
+
+grid.arrange(plot1, plot2, nrow=1)
+
+
 ```
+
+```{r}
+it <- 10
+sim.data <-c()
+
+x.sim <- c(1, 1, 1, 1)
+y.sim <- c(0, .5, .5,0)
+times <- round(y.sim*it)
+for (i in 1:it){
+  if (times[i] > 0 ) {
+    new.data <- rep(x.sim[i], times[i])
+    sim.data <- c(sim.data, new.data)
+  } else {sim.data <- sim.data}
+  }
+
+```
+
 
 
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
