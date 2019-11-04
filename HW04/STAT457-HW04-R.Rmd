@@ -177,22 +177,22 @@ grid.arrange(plot1, plot2, nrow=1)
 ```
 
 
-```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+```{r, echo=FALSE}
+n <- 40
+y <- 5
+a0 <- 0.19
+b0 <- 0.35
+a <- y + a0
+b <- n - y + b0
 
-a <- 5+0.19
-b <- 40-5+0.35
-
-func_dpost3b <- function(x){dunif(x, .19, .35)*dbeta(x, shape1=a, shape2=b)}
-func_ppost3b <- function(x){punif(x, .19, .35)*pbeta(x, shape1=a, shape2=b)}
 func_postdist <- function(x){dunif(x, .19, .35)*dbeta(x, shape1=a, shape2=b)}
 prior <-    stat_function(fun = dunif, args = list(min=0.19,max=0.35), lwd = 1.5, linetype="dashed", aes(col=dist[3]))
 posterior <-stat_function(fun = func_postdist,  lwd = 1.5, linetype="dotted", aes(col=dist[2]))
 
 set.seed(040302)
-x.sim <- seq(.19, .35, length=1000)
-y.sim <- func_post3b(x.sim)
+x.sim <- seq(0, 1, length=1000)
+y.sim <- func_postdist(x.sim)
 df <- data.frame("Xsim" = x.sim, "Ysim"=y.sim)
-x.max <- df$Xsim[Ysim=max(y.sim)]
 
 
 plot1 <- ggplot(Binomial.Likelihood, aes(L))+geom_density(aes(y=..density..,  col=dist[1]), lwd=1.5)+
@@ -203,22 +203,50 @@ plot1 <- ggplot(Binomial.Likelihood, aes(L))+geom_density(aes(y=..density..,  co
   scale_colour_manual("", values = c(colors[1], colors[2], colors[3])) +
   theme(legend.position = "bottom")
 
+#For the probability of > 0.2, we are essentially finding P(X>= 8), because 0.2 is **8**/40. We do this analytically with integral, for each value of y and then add those probabilites up
+lower <- 0.19
+upper <- 0.35
+f <- function(theta){dbinom(y, n, theta)/(upper - lower)}
+num_integral <- integrate(f, .20, .35)
+den_integral <- integrate(f, .19, .35)
 
-val <- length(data.sim[data.sim >= 0.200]) / length(data.sim) 
-CI.low <-quantile(data.sim, .025)
-CI.up <- quantile(data.sim, .975)
-#df <- data.frame("x"=x, "y"=y)
+pval <- num_integral$value/den_integral$value
+```
+
+```{r, echo=FALSE, eval=FALSE }
+#for the 95% upper/lower bound
+const <- den_integral$value
+
+eps <- .1
+theta_L <- .19 + 1e-8
+while (eps > 1e-6) {
+  theta_L <- theta_L + 1e-7
+  eps <- abs(integrate(f, .19, theta_L)$value - .025*const)
+}
+CI.low <- theta_L
+
+eps2 <- .1
+theta_U <- .19 + 1e-8
+while (eps2 > 1e-6) {
+  theta_U <- theta_U + 1e-7
+  eps2 <- abs(integrate(f, .19, theta_U)$value - .975*const)
+}
+CI.up <- theta_U
+
+# check
+#integrate(f, .19, theta_L)$value/const # close to 0.025
+#integrate(f, .19, theta_U)$value/const # close to 0.975
+```
+
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
+
+CI.up <- 0.3057802  #run beforehand (above)
+CI.low <- 0.1910938 #run beforehand (above)
 
 
 
-
-
-
-
-
-
-
-plot2 <- ggplot(df, aes(Xsim, Ysim))+ geom_line(lwd = 1.5, linetype="dotted", aes(col=dist[2]))+
+plot2 <- ggplot(df, aes(Xsim, Ysim))+ geom_line(lwd = 1.5, linetype="dotted", aes(col=dist[2]))+xlim(0, 1)+
   geom_ribbon(data=subset(df, Xsim>0.2), aes(ymax=Ysim), ymin=0, fill=colors[2], color=NA, alpha=0.4)+
   annotate("text", x=0.3, y=5, label=paste("P(X > 0.200 | Y):", decimal(pval, dec)), hjust=0, size=5)+
   annotate("text", x=0.3, y=8, label=paste("CI: (", decimal(CI.low, dec), ",", decimal(CI.up, dec), ")"), size=5, hjust=0)+
@@ -232,21 +260,6 @@ grid.arrange(plot1, plot2, nrow=1)
 
 ```
 
-```{r}
-it <- 10
-sim.data <-c()
-
-x.sim <- c(1, 1, 1, 1)
-y.sim <- c(0, .5, .5,0)
-times <- round(y.sim*it)
-for (i in 1:it){
-  if (times[i] > 0 ) {
-    new.data <- rep(x.sim[i], times[i])
-    sim.data <- c(sim.data, new.data)
-  } else {sim.data <- sim.data}
-  }
-
-```
 
 
 
@@ -435,23 +448,29 @@ mode.post <- (a-1)/b
 
 $$
 \begin{aligned}
- & \quad \left( \frac{2 + \theta}{4},  \frac{1 - \theta}{4}, \frac{ 1 - \theta}{4}, \frac{\theta}{4}   \right)
- \\
- \ell(\theta \mid Y) & = \log(2+ \theta) - \log(4) + 2\log(1 - \theta) - 2\log(4) + \log(\theta) - \log(4)
- \\
- \frac{\partial \ell (\theta \mid Y)}{\partial \theta)} & = \frac{1}{2 + \theta} + \frac{2}{1 - \theta} + \frac{1}{\theta} 
- \\
- \frac{\partial^2 \ell (\theta \mid Y)}{\partial \theta^2)} & = - \frac{1}{(2 + \theta)^2} - \frac{2}{(1 - \theta)^2} - \frac{1}{\theta^2} 
- \\
- \theta^{(i+1)} & = \frac{ 
-  \frac{1}{2 + \theta^{(i)}} + \frac{2}{1 - \theta^{(i)}} + \frac{1}{\theta^{(i)}} 
-  }{
-  - \frac{1}{(2 + \theta^{(i)})^2} - \frac{2}{(1 - \theta^{(i)})^2} - \frac{1}{(\theta^{(i)})^2}
-  }
+L(\theta \mid \pmb{Y}) & = 
+\frac{ (y_1 + y_2 + y_3 + y_4)!}{y_1! y_2!y_2! y_4!}
+\left( \frac{2 + \theta}{4} \right)^{y_1}
+\left( \frac{1 - \theta}{4} \right)^{y_2}
+\left( \frac{1 - \theta}{4} \right)^{y_3}
+\left( \frac{\theta}{4}     \right)^{y_4}
+\\[.5ex]
+& \propto (2+ \theta)^{y_1} \cdot (1 - \theta)^{y_2 + y_3} \cdot (\theta)^{y_4}
+\\[1ex]
+\ell(\theta \mid \pmb{Y}) & \propto y_1 \log(2 + \theta) + (y_2 + y_3) \log(1 - \theta) + y_4 \log(\theta)
+\\[.5ex]
+\frac{ \partial \ell}{\partial \theta} &= \frac{y_1}{2 + \theta} - \frac{y_2 + y_3}{1 - \theta} + \frac{y_4}{\theta}
+\\[.5ex]
+\frac{\partial^2 \ell}{\partial \theta^2} & = - \frac{y_1}{(2 + \theta)^2} - \frac{ y_2 + y_3}{(1 - \theta)^2} - \frac{y_4}{\theta^2}
+\\[.5ex]
+\theta^{(i+1)} & = \theta^{(i)} - 
+\frac{
+ \frac{y_1}{2 + \theta^{(i)}} - \frac{y_2 + y_3}{1 - \theta^{(i)}} + \frac{y_4}{\theta^{(i)}}
+}{
+ - \frac{y_1}{(2 + \theta^{(i)})^2} - o\frac{ y_2 + y_3}{(1 - \theta^{(i)})^2} - \frac{y_4}{(\theta^{(i)})^2}
+}
 \end{aligned} 
 $$
-[outstanding!!]  
-
 ```{r, echo=FALSE}
 func_newton.raphson <- function(f, start, it, tol){
   x0 <- start
@@ -475,44 +494,39 @@ it <- 1000
 
 
 ### Problem 5a  
-What is the likelihood for the data $Y = (125, 18, 20, 34)$?  
 $$
-\theta^{(i+1)} =  - \frac{ 
-  \frac{125}{2 + x} - \frac{ 38}{1 - x} + \frac{34}{x}
-  }{
-  \frac{125}{(2 + x)^2} + \frac{38}{(1 - x)^2} + \frac{34}{x^2} 
-  }
+L(\theta \mid \pmb{Y} = (125, 18, 20 , 34)) \propto (2+ \theta)^{125} \cdot (1 - \theta)^{38} \cdot (\theta)^{34}
+\\[.5ex]
 $$
-[outstanding!!]    
-```{r, echo=FALSE}
-func_a<-function(x){
-  -(125/(2+x)-38/(1-x)+34/x)/(125/(2+x)^2+38/(1-x)^2+34/x^2)
-}
-```
 
 
 ### Problem 5b  
-What is the likelihood for the data $Y = (14, 0, 1, 5)$?  
 $$
-L(\theta \mid Y) = - \frac{ 
-  \frac{14}{2 + x} - \frac{ 1}{1 - x} + \frac{5}{x}
-  }{
-  \frac{14}{(2 + x)^2} + \frac{1}{(1 - x)^2} + \frac{5}{x^2} 
-  }
+L(\theta \mid \pmb{Y} = (14, 0, 1, 5)) \propto (2+ \theta)^{14} \cdot (1 - \theta)^{1} \cdot (\theta)^{5}
 $$
-[outstanding!!]  
-
-```{r, echo=FALSE }
-func_b<-function(x){
-  -(14/(2+x)-1/(1-x)+5/x)/(14/(2+x)^2+1/(1-x)^2+5/x^2)
-}
-```
 
 
 ### Problem 5c  
-Use th Newton-Raphson algorithm to obtain the MLE $(\hat{\theta})$ of $\theta$ for $Y = (125, 18, 20, 34)$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6, .8$.  How do you assess convergence of the algorithm.  
+Use th Newton-Raphson to obtain the MLE $(\hat{\theta})$ for $Y = (125, 18, 20, 34)$.  Start the algorithm at $\theta = .1, .2, .3, .4, .6, .8$.  
+```{r, echo=FALSE, eval=FALSE}
+#How do you assess convergence of the algorithm.  
+```
+
 
 ```{r, echo=FALSE}
+y1 <- 125
+y2 <- 18
+y3 <- 20
+y4 <- 34
+func_a<-function(x){
+ (
+  y1/(2+x)-(y2+y3)/(1-x)+y4/x
+  ) / (
+  -y1/(2+x)^2-(y2+y3)/(1-x)^2-y4/x^2
+  )
+}
+
+#-(125/(2+x)-38/(1-x)+34/x)/(125/(2+x)^2+38/(1-x)^2+34/x^2)
 func_newton.raphson(func_a, 0.1, it, tol)
 func_newton.raphson(func_a, 0.2, it, tol)
 func_newton.raphson(func_a, 0.3, it, tol)
@@ -525,6 +539,19 @@ func_newton.raphson(func_a, 0.8, it, tol)
 ### Problem 5d  
 Repeat 5c for $Y = (14, 0, 1, 15)$.  
 ```{r, echo=FALSE}
+y1 <- 14
+y2 <- 0
+y3 <- 1
+y4 <- 5
+func_b<-function(x){
+ (
+  y1/(2+x)-(y2+y3)/(1-x)+y4/x
+  ) / (
+  -y1/(2+x)^2-(y2+y3)/(1-x)^2-y4/x^2
+  )
+}
+ #-(14/(2+x)-1/(1-x)+5/x)/(14/(2+x)^2+1/(1-x)^2+5/x^2)
+
 func_newton.raphson(func_b, 0.1, it, tol)
 func_newton.raphson(func_b, 0.2, it, tol)
 func_newton.raphson(func_b, 0.3, it, tol)
