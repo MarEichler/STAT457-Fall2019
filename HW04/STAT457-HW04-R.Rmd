@@ -467,7 +467,7 @@ L(\theta \mid \pmb{Y}) & =
 \frac{
  \frac{y_1}{2 + \theta^{(i)}} - \frac{y_2 + y_3}{1 - \theta^{(i)}} + \frac{y_4}{\theta^{(i)}}
 }{
- - \frac{y_1}{(2 + \theta^{(i)})^2} - o\frac{ y_2 + y_3}{(1 - \theta^{(i)})^2} - \frac{y_4}{(\theta^{(i)})^2}
+ - \frac{y_1}{(2 + \theta^{(i)})^2} - \frac{ y_2 + y_3}{(1 - \theta^{(i)})^2} - \frac{y_4}{(\theta^{(i)})^2}
 }
 \end{aligned} 
 $$
