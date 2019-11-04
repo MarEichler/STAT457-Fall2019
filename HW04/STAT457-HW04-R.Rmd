@@ -356,13 +356,13 @@ func_distplot3c(Binomial.Likelihood, a0, b0, "Bayes Prior: Beta(1, 1)")
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
 a0 <- .5
 b0 <- .5
-func_distplot3c(Binomial.Likelihood, a0, b0, "Jeffery's Prior: Beta(1, 1)")
+func_distplot3c(Binomial.Likelihood, a0, b0, "Jeffery's Prior: Beta(.5, .5)")
 ```
 
 ```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.height=4}
 a0 <- 0
 b0 <- 0
-func_distplot3c(Binomial.Likelihood, a0, b0, "Haldane's Prior: Beta(1, 1)")
+func_distplot3c(Binomial.Likelihood, a0, b0, "Haldane's Prior: Beta(0, 0)")
 ```
 
 
