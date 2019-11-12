@@ -1,0 +1,58 @@
+---
+title: STAT 457 Homework 05
+author: Martha Eichlersmith
+date: 2019-11-16
+output:
+  pdf_document:
+    fig_caption: yes
+header-includes:
+  - \usepackage{color}
+  - \usepackage{mathtools}
+  - \usepackage{amsbsy} #bold in mathmode
+  - \usepackage{nicefrac} # for nice fracs 
+---
+```{r, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+library(ggplot2) #ggplot
+library(readr) #import CSV
+library(gridExtra) #organize plots
+library(grid) #organize plots
+library(latex2exp) #latex in ggplot titles 
+library(knitr) #to help make tables 
+library(matlib) #A = matrix, inv(A) = A^{-1} 
+library(numDeriv) #calculate numerical first and second order derivatives 
+decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
+dec <- 5
+```
+
+## Problem 1  
+Consider two urns each containing an unknown mixture of blue and white marbles.  A random sample of size 18 (with replacement) is drawn from urn #1 and a random sample of size 6 (with replacement) is drawn from urn #2.  Of the 18 selected marbles from urn #1, 14 are blue.  The corresponding number of blue marbles from urn #2 is 2.  
+
+### Problem 1a  
+Let $\pi$ denote the proportion of blue marbles in urn #1 and let $\psi$ denote the corresponding proportion in urn #2.  Under the (i) Haldane, (ii) flat and (iii) non-informative priors, compute $p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  > \ln \left[  \frac{ \psi}{1 - \psi} \right] \mid \text{data} \right)$ using the normal approximation.  
+
+### Problem 1b  
+Repeat (1a) by drawing deviates from the appropriate beta distributions.  Quantify the Monte Carlo error in your value.  
+
+### Problem 1c 
+Compare your results in (1a) and (1b) to the p-value obtained via Fisher's exact test.  
+
+### Problem 1d  
+Add delinquency problem 
+
+## Problem 2  
+Suppose a sample of size $n$ is drawn at random and with replacement from some population.  For large $n$ the sample proportion $(\hat{p})$ is normally distributed with mean $p$ and variance $\frac{ p(1 - p)}{n}$.  Find the asymptotic distribution of $2\sin^{-1}\sqrt{\hat{p}}$ using the delta method.  
+
+## Problem 3  
+Let $x_1, \cdots, x_n$ be an iid sample from $\mathcal{N}(\theta, 1)$ and let $y_1, \cdots , y_n$ be an independent iid sample from $\mathcal{N}(\phi, 1)$.  Derive the distribution of $\overline{x} / \overline{y}$ (where $\overline{y} \neq 0$) via the delta method. 
+
+## Problem 4  
+197 animals are distributed into four categories: $Y = (y_1, y_2, y_3, y_4)$ according to the genetic linkage model $\left( \frac{2 + \theta}{4}, \frac{1 - \theta}{4}, \frac{1- \theta}{4}, \frac{ \theta}{4} \right)$.  In HW#4 you derived the likelihood for the data $Y = (125, 18, 20, 34)$ and you derived the likelihood for the data $Y = (14, 0, 1, 15)$.  In that homework, you also used Newton-Raphson algorithm to obtain the MLE ($\hat{\theta}$) of $\theta$ and the standard error of $\hat{\theta}$.  
+
+### Problem 4a  
+Plot the normalized likelihood and the associated normal approximation in the same figure for the data $Y= (125, 18, 20, 34)$.  Discuss the adequacy of the normal approximation.  
+
+### Problem 4b  
+Repeat (4a) for $Y = (14, 0, 1, 5)$  
+
+## Problem 5  
+Use Laplace's method (second order) to compute the posterior mean (under a flat prior) for the genetic linkage model for both data sets.  
