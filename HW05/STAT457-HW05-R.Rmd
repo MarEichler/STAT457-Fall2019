@@ -10,16 +10,25 @@ header-includes:
   - \usepackage{mathtools}
   - \usepackage{amsbsy} #bold in mathmode
   - \usepackage{nicefrac} # for nice fracs 
+  - \usepackage{booktabs}
+  - \usepackage{geometry}
+  - \usepackage{caption} #to remove automatic table name and number - \captionsetup[table]{labelformat=empty}, put code under ---
+geometry: "left=1.75cm,right=1.75cm,top=1.5cm,bottom=2cm" 
+
 ---
+
+\captionsetup[table]{labelformat=empty} 
 ```{r, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
 library(ggplot2) #ggplot
 library(readr) #import CSV
 library(gridExtra) #organize plots
 library(grid) #organize plots
 library(latex2exp) #latex in ggplot titles 
-library(knitr) #to help make tables 
 library(matlib) #A = matrix, inv(A) = A^{-1} 
 library(numDeriv) #calculate numerical first and second order derivatives 
+library(gtable) #for tablegrob functions 
+library(kableExtra) #for kable functions
+library(dplyr) #for piping 
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 ```
@@ -27,11 +36,115 @@ dec <- 5
 ## Problem 1  
 Consider two urns each containing an unknown mixture of blue and white marbles.  A random sample of size 18 (with replacement) is drawn from urn #1 and a random sample of size 6 (with replacement) is drawn from urn #2.  Of the 18 selected marbles from urn #1, 14 are blue.  The corresponding number of blue marbles from urn #2 is 2.  
 
+$$
+\begin{aligned}
+L(\pi | Y) & \propto \pi^{y} (1 - \pi)^{n - y} = \pi^{14}(1 - \pi)^{4} \sim \text{Binomial}, n_{\pi} = 18, \ y_{\pi} = 14
+\\[0.5ex]
+& \implies  p(\pi \mid Y)  \sim \text{Beta}(y + \alpha_0, n - y + \beta_0) \quad \text{where} \quad p(\pi) \sim \text{Beta}(\alpha_0, \beta_0) 
+\\[2.5ex]
+L(\psi | Y) & \propto \psi^{y} (1 - \psi)^{n - y} = \psi^{2}(1 - \psi)^{4} \sim \text{Binomial}, n_{\pi} = 6, \ y_{\pi} = 2
+\\[0.5ex]
+& \implies  p(\psi \mid Y)  \sim \text{Beta}(y + \alpha_0, n - y + \beta_0) \quad \text{where} \quad p(\psi) \sim \text{Beta}(\alpha_0, \beta_0) 
+\end{aligned}
+$$
+
 ### Problem 1a  
 Let $\pi$ denote the proportion of blue marbles in urn #1 and let $\psi$ denote the corresponding proportion in urn #2.  Under the (i) Haldane, (ii) flat and (iii) non-informative priors, compute $p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  > \ln \left[  \frac{ \psi}{1 - \psi} \right] \mid \text{data} \right)$ using the normal approximation.  
 
+$$
+p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  > \ln \left[  \frac{ \psi}{1 - \psi} \right] \mid \text{data} \right) 
+= 
+p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  - \ln \left[  \frac{ \psi}{1 - \psi} \right] > 0  \mid \text{data} \right) 
+$$
+```{r, echo=FALSE, warning=FALSE}
+n.pi <- 18
+n.psi <- 6 
+y.pi <- 14
+y.psi <- 2
+pi <- y.pi / n.pi
+psi <- y.psi / n.psi
+
+
+
+func_approxNormpval <- function(a0, b0){
+alpha <- y.pi + a0
+gamma <- y.psi + a0
+beta  <- n.pi - y.pi + b0
+delta <- n.psi - y.psi + b0
+post.pi <- (y.pi+a0 )/ n.pi
+post.psi <- (y.psi+a0) / n.psi
+inside.log <- (post.pi / (1 - post.pi)) / (post.psi/(1 - post.psi))
+approxNorm.mean <- log( inside.log )
+approxNorm.var <- (1/alpha) + (1/beta) + (1/gamma) + (1/delta)
+pval <- 1-pnorm(0, approxNorm.mean, approxNorm.var)
+pval 
+}
+
+
+names <- c("Haldane - Beta(0, 0)","Flat -  Beta(1, 1)", "Non-informative - Beta(.5, .5)")
+pvals <- c(func_approxNormpval(0, 0), func_approxNormpval(1,1), func_approxNormpval(.5, .5))
+results <- rbind(names, decimal(pvals, dec))
+rownames(results) <- c("Prior", "p-value")
+
+kable(results, caption="Normal Approx: Probability difference in logodds is greater than 0")
+```
+
+
 ### Problem 1b  
-Repeat (1a) by drawing deviates from the appropriate beta distributions.  Quantify the Monte Carlo error in your value.  
+Repeat (1a) by drawing deviates from the appropriate beta distributions.  Quantify the Monte Carlo error in your value.   
+```{r, echo=FALSE, warning=FALSE}
+set.seed(050101)
+
+n.pi <- 18
+n.psi <- 6 
+y.pi <- 14
+y.psi <- 2
+ 
+func_pval <- function(it, a0, b0){
+a0 <- 0 
+b0 <- 0
+a.pi <- n.pi + a0
+b.pi <- n.pi - y.pi + b0
+a.psi <- n.psi + a0
+b.psi <- n.psi - y.psi + b0
+
+post.pi <- rbeta(it, a.pi, b.pi)
+post.psi <- rbeta(it, a.psi, b.psi)
+
+difflogodds <- log(post.pi/(1 - post.pi)) - log(post.psi/(1 - post.psi)) 
+se <- sd(difflogodds)/sqrt(it)
+pval <- 1 - pnorm(0, mean(difflogodds), sd(difflogodds))
+results <- c(pval, se)
+}
+
+func_logdiff <- function(it.vec, a0, b0){
+a0.vec <- rep(a0, length(it.vec))
+b0.vec <- rep(b0, length(it.vec))
+pvals <- mapply(func_pval, it.vec, a0.vec, b0.vec)
+table <- rbind(it.vec, decimal(pvals, dec))
+rownames(table) <- c("Iterations", "p-value", "Standard Error")
+table 
+}
+
+it.vec <- c(1e+04, 1e+05, 1e+06)
+#kable(func_logdiff(it.vec, 0, 0), caption="Haldane Prior - Beta(0, 0)")
+#kable(func_logdiff(it.vec, 1, 1), caption="Flat Prior -  Beta(1, 1)")
+#kable(func_logdiff(it.vec, .5, .5), caption="Non-informative Prior - Beta(.5, .5)")
+
+t.H <- func_logdiff(it.vec, 0, 0)
+t.F <- func_logdiff(it.vec, 1, 1)
+t.N <- func_logdiff(it.vec,.5, .5)
+
+long_dt <- rbind(t.H, t.F, t.N)
+
+```
+
+`
+```{r, echo=FALSE}
+
+```
+
+
 
 ### Problem 1c 
 Compare your results in (1a) and (1b) to the p-value obtained via Fisher's exact test.  
