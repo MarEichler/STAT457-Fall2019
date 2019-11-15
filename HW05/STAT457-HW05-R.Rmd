@@ -29,6 +29,7 @@ library(numDeriv) #calculate numerical first and second order derivatives
 library(gtable) #for tablegrob functions 
 #library(kableExtra) #for kable functions
 library(dplyr) #for piping 
+knitr::opts_chunk$set(echo=FALSE, fig.width = 10, fig.height = 4)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
@@ -57,7 +58,7 @@ p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  > \ln \left[  \frac{ \psi}{1 
 = 
 p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  - \ln \left[  \frac{ \psi}{1 - \psi} \right] > 0  \mid \text{data} \right) 
 $$
-```{r, echo=FALSE, warning=FALSE}
+```{r p1a, warning=FALSE}
 n.pi <- 18
 n.psi <- 6 
 y.pi <- 14
@@ -92,7 +93,7 @@ knitr::kable(results, booktabs=TRUE, 'latex', caption="Normal Approx: Probabilit
 
 ### Problem 1b  
 Repeat (1a) by drawing deviates from the appropriate beta distributions.  Quantify the Monte Carlo error in your value.   
-```{r hw041b, echo=FALSE, warning=FALSE}
+```{r p1b, warning=FALSE}
 set.seed(050101)
 
 n.pi <- 18
@@ -135,15 +136,15 @@ knitr::kable(dt, booktabs=T, 'latex', caption="Probability that the log differen
   kableExtra::add_header_above(c(" "=1, "Haldane Beta(0, 0)"=3, "Flat Beta(1, 1)"=3, "Non-informative Beta(.5, .5)"=3)) #need to have a space in empty columns 
 ```
 
-
-
-
-\newpage 
-
+\newpage  
 ### Problem 1c 
 Compare your results in (1a) and (1b) to the p-value obtained via Fisher's exact test.  
+```{r p1c}
+blue <- matrix(c(14, 2, 4, 4), nrow=2)
+fisher.test(blue, or=1, alternative="less")
+```
 
-asl
+The Fisher Exact test p-value is larger than the normal approximation or the Monte Carlo methods.  
 
 ### Problem 1d  
 Add delinquency problem 
@@ -156,12 +157,107 @@ Let $x_1, \cdots, x_n$ be an iid sample from $\mathcal{N}(\theta, 1)$ and let $y
 
 ## Problem 4  
 197 animals are distributed into four categories: $Y = (y_1, y_2, y_3, y_4)$ according to the genetic linkage model $\left( \frac{2 + \theta}{4}, \frac{1 - \theta}{4}, \frac{1- \theta}{4}, \frac{ \theta}{4} \right)$.  In HW#4 you derived the likelihood for the data $Y = (125, 18, 20, 34)$ and you derived the likelihood for the data $Y = (14, 0, 1, 15)$.  In that homework, you also used Newton-Raphson algorithm to obtain the MLE ($\hat{\theta}$) of $\theta$ and the standard error of $\hat{\theta}$.  
+```{r p4-graph}
+func_normlike<-function(x,y1,y2,y3,y4){
+  like <-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
+  like.max<-max(like)
+  like/like.max #normalized likelihood (on scale from 0 to 1) 
+}
+
+func_scalenormal<-function(x, mean, sd){
+  scales::rescale(dnorm(x, mean, sd), to=c(0, 1)) #normal (on scale from 0 to 1) 
+}
+
+func_plots <- function(yval, theta.mle, se){
+colors <- c("navy", "maroon")
+norm.like <-    stat_function(fun = func_normlike, args = list(y1=yval[1], y2=yval[2], y3=yval[3], y4=yval[4]), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
+normal.approx <-stat_function(fun = func_scalenormal, args = list(mean=theta.mle, sd=se), lwd = 2.5, linetype="dotted", aes(col="Normal Approximation"))
+
+print.yval <- paste(yval, collapse=", ")
+name <- paste("Normal Likelihood and Normal Approximation for Y=(", print.yval, ")")
+
+table <- data.frame("Statistic"=c("MLE", "Standard Error")
+                    , "Value"=decimal(c(theta.mle, se), dec))
+tg <- tableGrob(table)
+
+x <- seq(0, 1, 0.001)
+df <- data.frame("X"=x)
+ggplot(data=df, aes(x=X))+
+  norm.like+normal.approx+
+  ggtitle(paste(name))+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[1], colors[2])) +
+  theme(legend.position = "bottom")+
+  annotation_custom(tg, xmin=.25, ymin=.25, xmax=0.5, ymax=1)
+
+}
+```
+
+```{r p4-netwonraphson}
+func_newton.raphson <- function(f, start, it, tol){
+  x0 <- start
+  k <- c()
+  for (i in 1:it) {
+    x1 <- x0 - f(x0) #calcualte next value x1
+    k[i] <- x1 #store x1 
+    root.approx <- tail(k, n=1)
+    it.completed <- length(k) 
+    # Once the difference between x0 and x1 becomes sufficiently small, output the results.
+    if (abs(x1 - x0) < tol & !is.na(abs(x1- x0)))
+      { root.approx 
+      break} 
+    else if( it.completed == it){print(paste("Start at", start, ": diverges"))} 
+    else{ x0 <- x1}
+  }
+  return(root.approx)
+}
+tol <- 1e-5
+it <- 1000
+
+func_se <- function(theta.mle){
+  secondderiv <-  -(yval[1] / (2 + theta.mle)^2)  - ((yval[2] + yval[3])/(1 - theta.mle)^2 )- (yval[4]/theta.mle)
+  se <- sqrt(1/(-secondderiv))
+  se #standard error is 1 /Information evaluate at MLE, Information = -2nd deriv of log like  
+}
+```
+
 
 ### Problem 4a  
-Plot the normalized likelihood and the associated normal approximation in the same figure for the data $Y= (125, 18, 20, 34)$.  Discuss the adequacy of the normal approximation.  
+Plot the normalized likelihood and the associated normal approximation in the same figure for the data $Y= (125, 18, 20, 34)$.  Discuss the adequacy of the normal approximation. 
+
+```{r p4a, warning=FALSE}
+yval <- c(125, 18, 20, 34)
+func_a<-function(x){
+ (
+  yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x
+  ) / (
+  -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2
+  ) #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
+}
+
+theta.mle <- func_newton.raphson(func_a, 0.6, it, tol)
+se <- func_se(theta.mle)
+
+func_plots(yval, theta.mle, se)
+```
 
 ### Problem 4b  
 Repeat (4a) for $Y = (14, 0, 1, 5)$  
+```{r p4b, warning=FALSE}
+yval <- c(14, 0, 1, 5)
+func_b<-function(x){
+ (
+  yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x
+  ) / (
+  -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2
+  ) #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
+}
+
+theta.mle <- func_newton.raphson(func_b, 0.9, it, tol)
+se <- func_se(theta.mle)
+
+func_plots(yval, theta.mle, se)
+```
 
 ## Problem 5  
 Use Laplace's method (second order) to compute the posterior mean (under a flat prior) for the genetic linkage model for both data sets.  
