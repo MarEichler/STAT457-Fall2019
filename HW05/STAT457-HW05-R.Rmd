@@ -171,10 +171,12 @@ $$
 $$
 ```{r p1c}
 blue <- matrix(c(14, 2, 4, 4), nrow=2)
-fisher.test(blue, or=1, alternative="greater")
+test <- fisher.test(blue, or=1, alternative="greater")
+test
+paste("Probabilitiy that log differences are greater than 0:", decimal(1 - test$p.value, dec))
 ```
 
-The Fisher Exact test p-value is significantly different from the methods used in (1a) and (1b).  
+The Fisher Exact test produces a a probability that is lower than the methods in (1a) and (1b).  
 
 ### Problem 1d  
 Add delinquency problem 
@@ -403,9 +405,146 @@ func_b<-function(x){
 theta.mle <- func_newton.raphson(func_b, 0.9, it, tol)
 se <- func_se(theta.mle)
 
+
 func_plots(yval, theta.mle, se)
 ```
 
 \newpage 
 ## Problem 5  
 Use Laplace's method (second order) to compute the posterior mean (under a flat prior) for the genetic linkage model for both data sets.  
+
+```{r p5-LaplacePostMean}
+func_LaplacePostMean <- function(yval, start.hat, start.star){
+n <- sum(yval) 
+
+func_nh <- function(x){   yval[1]*log(2+x) + (yval[2] + yval[3])*log(1 - x)+ yval[4]*log(x) }
+  #-nh(theta)
+
+func_1st.nh <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x}
+  #d(-nh(theta))/d theta- first derivative 
+
+func_2nd.nh <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2}
+  #d^2(-nh(theta))/d theta^2- second derivative 
+
+func_theta.hat <-function(x){ ( func_1st.nh(x) ) / ( func_2nd.nh(x) ) }
+  #function for NR to find mle theta hat for -nh(theta)
+  #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
+
+func_sig.hat <- function(x){1/sqrt(func_2nd.nh(x)/-n) }
+    #sigma.hat = h''(theta.hat) ^{-1/2}
+
+func_nh.star <- function(x){   yval[1]*log(2+x) + (yval[2] + yval[3])*log(1 - x)+ (yval[4] + 1)*log(x) }
+  #-nh*(theta)
+
+func_1st.nh.star <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+(yval[4]+1)/x}
+  #d(-nh*(theta))/d theta- first derivative 
+
+func_2nd.nh.star <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-(yval[4]+1)/x^2}
+  #d^2(-nh*(theta))/d theta^2- second derivative 
+
+
+func_theta.star <-function(x){ ( func_1st.nh.star(x) ) / ( func_2nd.nh.star(x) ) }
+  #function for NR to find mle theta star for -nh*(theta)
+  #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
+
+func_sig.star <- function(x){1/sqrt(func_2nd.nh.star(x)/-n) }
+    #sigma.star = h''(theta.star) ^{-1/2}
+
+theta.hat <- func_newton.raphson(func_theta.hat, start.hat, it, tol)
+theta.star <- func_newton.raphson(func_theta.star, start.star, it, tol)
+sig.hat <- func_sig.hat(theta.hat)
+sig.star <- func_sig.star(theta.star)
+
+post.mean <- (sig.star/sig.hat) * (exp(func_nh.star(theta.star)))/(exp(func_nh(theta.hat)))
+
+name <- c("theta.hat", "theta.star", "sigma.hat", "sigma.star", "Posterior Mean")
+values <- c(theta.hat, theta.star, sig.hat, sig.star, post.mean)
+
+table <- data.frame("Statistic"=name, "Value"=decimal(values, dec))
+
+print.yval <- paste(yval, collapse=", ")
+name <- paste("Laplace's Method (Second Order) of Posterior Mean for  Y=(", print.yval, ")")
+
+knitr::kable(table, booktabs=T, 'latex', caption=name) %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
+}
+```
+
+```{r checking, eval=FALSE}
+yval <- c(14, 0, 1, 15)
+start.hat <- 0.90344
+start.star <- 0.9122
+
+func_1st.nh <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x}
+  #d(-nh(theta))/d theta- first derivative 
+
+func_2nd.nh <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2}
+  #d^2(-nh(theta))/d theta^2- second derivative 
+
+func_theta.hat <-function(x){ ( func_1st.nh(x) ) / ( func_2nd.nh(x) ) }
+
+func_1st.nh.star <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+(yval[4]+1)/x}
+  #d(-nh*(theta))/d theta- first derivative 
+
+func_2nd.nh.star <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-(yval[4]+1)/x^2}
+  #d^2(-nh*(theta))/d theta^2- second derivative 
+
+func_theta.star <-function(x){ ( func_1st.nh.star(x) ) / ( func_2nd.nh.star(x) ) }
+
+func_newton.raphson(func_theta.hat, start.hat, it, tol)
+func_newton.raphson(func_theta.star, start.star, it, tol)
+
+
+func_b<-function(x){
+ (
+  yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x
+  ) / (
+  -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2
+  ) #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
+}
+
+func_newton.raphson(func_b, 0.9, it, tol)
+```
+
+
+
+$$
+\begin{aligned}
+L(\theta \mid Y) & \propto (2 + \theta)^{y_1} (1 - \theta)^{y_2 + y_3} (\theta)^{y_4 }
+\\
+\ell (\theta \mid Y) & \propto y_1 \ln(2 + \theta) + (y_2 + y_3) \ln (1 - \theta) + y_4 \ln (\theta )
+\\
+p(\theta) & = \theta^{\alpha - 1} (1 - \theta)^{\beta - 1} \\
+\text{Flat Prior } p(\theta) & = \theta^{ 1 - 1} ( 1- \theta)^{1 - 1}  = 1 
+\\[2ex]
+-nh(\theta) & = \ell(\theta \mid Y) + \ln(p(\theta))
+\\
+& = y_1 \ln(2 + \theta) + (y_2 + y_3) \ln (1 - \theta) + y_4 \ln (\theta ) + ln(1)
+\\
+& = y_1 \ln(2 + \theta) + (y_2 + y_3) \ln (1 - \theta) + y_4 \ln (\theta )
+\\[2ex]
+-nh^*(\theta) & = \ell(\theta \mid Y) + \ln(p(\theta)) + \underbrace{\ln(g(\theta))}_{\ln(\theta)}
+\\
+& = y_1 \ln(2 + \theta) + (y_2 + y_3) \ln (1 - \theta) + (y_4 + 1) \ln (\theta)
+\\[2ex]
+\hat{\theta} & = \text{Newton-Raphson Result} 
+\\[1.5ex]
+\theta^* & = \text{Newton-Raphson Result} 
+\\[2ex]
+\hat{\sigma} & = \left[ h''(\theta) \right]^{-1/2}_{\hat{\theta}} \quad \quad \ \ h(\theta) = \frac{1}{-n} \cdot -nh(\theta)
+\\[0.5ex]
+\sigma^* & = \left[ (h^*) ''(\theta) \right]^{-1/2}_{\theta^*} \quad h^* (\theta) = \frac{1}{-n} \cdot -nh^* (\theta)
+\\[2ex]
+\mathbb{E}_\theta \left[ \theta \right] & = \frac{ \sigma^*}{\hat{\sigma}} \cdot \frac{ \exp \left\{ -nh^*(\theta^*) \right\}}{\exp \left\{ -nh(\hat{\theta}) \right\}}
+\end{aligned} 
+$$
+
+```{r p5a}
+yval <- c(125, 18, 20, 34)
+func_LaplacePostMean(yval, 0.6, 0.6)
+```
+```{r p5b}
+yval <- c(14, 0, 1, 15)
+func_LaplacePostMean(yval, 0.9, 0.91)
+```
+
