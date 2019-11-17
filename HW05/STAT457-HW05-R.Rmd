@@ -29,6 +29,7 @@ library(numDeriv) #calculate numerical first and second order derivatives
 library(gtable) #for tablegrob functions 
 #library(kableExtra) #for kable functions
 library(dplyr) #for piping 
+library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(echo=FALSE, fig.width = 10, fig.height = 4)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
@@ -179,7 +180,34 @@ paste("Probabilitiy that log differences are greater than 0:", decimal(1 - test$
 The Fisher Exact test produces a a probability that is lower than the methods in (1a) and (1b).  
 
 ### Problem 1d  
-Add delinquency problem 
+Add delinquency problem. 
+
+```{r 1d-delinquency}
+
+alpha.count <- c(127, 123,  93, 17)
+gamma.count <- c(345, 209, 158, 65)
+parameters <- cbind(alpha.count, gamma.count)
+
+it <- 5
+func_delinq <- function(it){
+set.seed(050104)
+proportions <- rdirichlet(it, parameters)
+oldest.diff <- proportions[,1] - proportions[,5] #most delinq. oldest - least delinq. oldest 
+CI.val <- decimal(quantile(oldest.diff, c(0.025, 0.975)), dec)
+CI.95 <- paste("(", paste(CI.val, collapse=", "), ")")
+mean <- decimal(mean(oldest.diff), dec)
+vec <- c(it, mean, CI.95)
+vec}
+
+it.vec <- c(1e04, 1e05, 1e06)
+dt <- sapply(it.vec, func_delinq )
+rownames(dt) <- c("Iterations", "Mean", "95% CI")
+knitr::kable(dt, booktabs=T, 'latex', caption="Difference in Proportion Amoung Oldest: Most - Least") %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
+
+
+```
+
 
 
 \newpage  
