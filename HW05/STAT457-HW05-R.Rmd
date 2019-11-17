@@ -50,6 +50,15 @@ L(\psi | Y) & \propto \psi^{y} (1 - \psi)^{n - y} = \psi^{2}(1 - \psi)^{4} \sim 
 \end{aligned}
 $$
 
+$$
+\begin{array}{l c c}
+& \text{Blue} & \text{White} \\ \cline{2-3}
+\text{Urn 1} & \multicolumn{1}{|c|}{14} & \multicolumn{1}{c|}{4}  \\ \cline{2-3}
+\text{Urn 2} & \multicolumn{1}{|c|}{ 2} & \multicolumn{1}{c|}{4} \\ \cline{2-3}
+\end{array} 
+\quad \quad 
+$$  
+  
 ### Problem 1a  
 Let $\pi$ denote the proportion of blue marbles in urn #1 and let $\psi$ denote the corresponding proportion in urn #2.  Under the (i) Haldane, (ii) flat and (iii) non-informative priors, compute $p \left( \ln \left[  \frac{ \pi}{1 - \pi} \right]  > \ln \left[  \frac{ \psi}{1 - \psi} \right] \mid \text{data} \right)$ using the normal approximation.  
 
@@ -91,7 +100,7 @@ post.psi <- (y.psi+a0) / n.psi
 inside.log <- (alpha*delta) / (beta*gamma)
 approxNorm.mean <- log( inside.log )
 approxNorm.var <- (1/alpha) + (1/beta) + (1/gamma) + (1/delta)
-pval <- 1-pnorm(0, approxNorm.mean, approxNorm.var)
+pval <- 1-pnorm(0, approxNorm.mean, sqrt(approxNorm.var))
 pval 
 }
 
@@ -120,15 +129,17 @@ y.psi <- 2
 func_pval <- function(it, a0, b0){
 a0 <- 0 
 b0 <- 0
-a.pi <- n.pi + a0
-b.pi <- n.pi - y.pi + b0
-a.psi <- n.psi + a0
-b.psi <- n.psi - y.psi + b0
+alpha <- y.pi + a0
+gamma <- y.psi + a0
+beta  <- n.pi - y.pi + b0
+delta <- n.psi - y.psi + b0
 
-post.pi <- rbeta(it, a.pi, b.pi)
-post.psi <- rbeta(it, a.psi, b.psi)
+post.pi <- rbeta(it, alpha, beta)
+post.psi <- rbeta(it, gamma, delta)
 
-difflogodds <- log(post.pi/(1 - post.pi)) - log(post.psi/(1 - post.psi)) 
+inside.log <-(post.pi/(1 - post.pi))/(post.psi/(1 - post.psi))
+#inside.log <- (alpha*delta) / (beta*gamma)
+difflogodds <- log(inside.log) 
 se <- sd(difflogodds)/sqrt(it)
 pval <- 1 - pnorm(0, mean(difflogodds), sd(difflogodds))
 results <- c(pval, se)
@@ -155,18 +166,44 @@ knitr::kable(dt, booktabs=T, 'latex', caption="Probability that the log differen
  
 ### Problem 1c 
 Compare your results in (1a) and (1b) to the p-value obtained via Fisher's exact test.  
+$$
+\text{Odds Ratio > 1} \implies  \tfrac{\pi}{1 - \pi} > \tfrac{\psi}{1 - \psi} 
+$$
 ```{r p1c}
 blue <- matrix(c(14, 2, 4, 4), nrow=2)
-fisher.test(blue, or=1, alternative="less")
+fisher.test(blue, or=1, alternative="greater")
 ```
 
-The Fisher Exact test p-value is larger than the normal approximation or the Monte Carlo methods.  
+The Fisher Exact test p-value is significantly different from the methods used in (1a) and (1b).  
 
 ### Problem 1d  
 Add delinquency problem 
 
 ## Problem 2  
 Suppose a sample of size $n$ is drawn at random and with replacement from some population.  For large $n$ the sample proportion $(\hat{p})$ is normally distributed with mean $p$ and variance $\frac{ p(1 - p)}{n}$.  Find the asymptotic distribution of $2\sin^{-1}\sqrt{\hat{p}}$ using the delta method.  
+$$
+\begin{aligned}
+\hat{p} & \sim \mathcal{N}\left( p, \ \tfrac{ p(1 - p)}{n} \right)
+\\
+\text{Let } g(\hat{p}) & = 2\sin^{-1}\sqrt{\hat{p}}
+\\
+\sqrt{n} \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \sigma^2 [ g'(p)]^2 \right) 
+\\
+\sigma^2 & = \tfrac{ p(1 - p)}{n} 
+\\
+g'(p) & = \frac{ 1}{ \sqrt{1- p} \sqrt{p}}
+\\[0.5ex]
+[g'(p)]^2 & = \frac{1}{(1 - p)p} 
+\\[0.5ex]
+\sigma^2 [g'(p)]^2 & = \frac{ p(1 - p)}{n} \cdot \frac{1}{(1 - p)p}  = \frac{1}{n}
+\\[0.5ex]
+\sqrt{n} \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \tfrac{1}{n} \right) 
+\\
+g(\hat{p}) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( g(\hat{p}), \ 1 \right)
+\\
+2\sin^{-1}\sqrt{\hat{p}} & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 2\sin^{-1}\sqrt{p}\ ,\ 1 \right)
+\end{aligned} 
+$$
 
 \newpage 
 ## Problem 3  
@@ -297,8 +334,8 @@ ggplot(data=df, aes(x=X))+
   ggtitle(paste(name))+
   theme(axis.title.x = element_blank())+
   scale_colour_manual("", values = c(colors[1], colors[2])) +
-  theme(legend.position = "bottom")+
-  annotation_custom(tg, xmin=.25, ymin=.25, xmax=0.5, ymax=1)
+  #theme(legend.position = "bottom")+
+  annotation_custom(tg, xmin=.0, ymin=.25, xmax=0.5, ymax=1)
 
 }
 ```
@@ -335,7 +372,7 @@ func_se <- function(theta.mle){
 ### Problem 4a  
 Plot the normalized likelihood and the associated normal approximation in the same figure for the data $Y= (125, 18, 20, 34)$.  Discuss the adequacy of the normal approximation. 
 
-```{r p4a, warning=FALSE}
+```{r p4a, warning=FALSE, fig.height=2.5}
 yval <- c(125, 18, 20, 34)
 func_a<-function(x){
  (
@@ -353,7 +390,7 @@ func_plots(yval, theta.mle, se)
 
 ### Problem 4b  
 Repeat (4a) for $Y = (14, 0, 1, 5)$  
-```{r p4b, warning=FALSE}
+```{r p4b, warning=FALSE, fig.height=2.5}
 yval <- c(14, 0, 1, 5)
 func_b<-function(x){
  (
@@ -369,5 +406,6 @@ se <- func_se(theta.mle)
 func_plots(yval, theta.mle, se)
 ```
 
+\newpage 
 ## Problem 5  
 Use Laplace's method (second order) to compute the posterior mean (under a flat prior) for the genetic linkage model for both data sets.  
