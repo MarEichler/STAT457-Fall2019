@@ -181,6 +181,8 @@ The Fisher Exact test produces a a probability that is lower than the methods in
 ### Problem 1d  
 Add delinquency problem 
 
+
+\newpage  
 ## Problem 2  
 Suppose a sample of size $n$ is drawn at random and with replacement from some population.  For large $n$ the sample proportion $(\hat{p})$ is normally distributed with mean $p$ and variance $\frac{ p(1 - p)}{n}$.  Find the asymptotic distribution of $2\sin^{-1}\sqrt{\hat{p}}$ using the delta method.  
 $$
@@ -406,6 +408,7 @@ theta.mle <- func_newton.raphson(func_b, 0.9, it, tol)
 se <- func_se(theta.mle)
 
 
+
 func_plots(yval, theta.mle, se)
 ```
 
@@ -470,43 +473,6 @@ knitr::kable(table, booktabs=T, 'latex', caption=name) %>%
 }
 ```
 
-```{r checking, eval=FALSE}
-yval <- c(14, 0, 1, 15)
-start.hat <- 0.90344
-start.star <- 0.9122
-
-func_1st.nh <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x}
-  #d(-nh(theta))/d theta- first derivative 
-
-func_2nd.nh <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2}
-  #d^2(-nh(theta))/d theta^2- second derivative 
-
-func_theta.hat <-function(x){ ( func_1st.nh(x) ) / ( func_2nd.nh(x) ) }
-
-func_1st.nh.star <- function(x){ yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+(yval[4]+1)/x}
-  #d(-nh*(theta))/d theta- first derivative 
-
-func_2nd.nh.star <- function(x){ -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-(yval[4]+1)/x^2}
-  #d^2(-nh*(theta))/d theta^2- second derivative 
-
-func_theta.star <-function(x){ ( func_1st.nh.star(x) ) / ( func_2nd.nh.star(x) ) }
-
-func_newton.raphson(func_theta.hat, start.hat, it, tol)
-func_newton.raphson(func_theta.star, start.star, it, tol)
-
-
-func_b<-function(x){
- (
-  yval[1]/(2+x)-(yval[2]+yval[3])/(1-x)+yval[4]/x
-  ) / (
-  -yval[1]/(2+x)^2-(yval[2]+yval[3])/(1-x)^2-yval[4]/x^2
-  ) #iterations of newton raphson = theta^{i + 1} = theta^{i} - (1st deriv of log like) / (2nd deriv of log like)
-}
-
-func_newton.raphson(func_b, 0.9, it, tol)
-```
-
-
 
 $$
 \begin{aligned}
@@ -544,7 +510,7 @@ yval <- c(125, 18, 20, 34)
 func_LaplacePostMean(yval, 0.6, 0.6)
 ```
 ```{r p5b}
-yval <- c(14, 0, 1, 15)
+yval <- c(14, 0, 1, 5)
 func_LaplacePostMean(yval, 0.9, 0.91)
 ```
 
