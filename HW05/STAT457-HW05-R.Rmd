@@ -403,7 +403,7 @@ s.e.(\hat{\theta}) & = \sqrt{ 1 / \mathcal{I}(\theta)}
 $$
 
 ```{r p4-graph}
-func_normlike<-function(x,y1,y2,y3,y4){
+func_scalelike<-function(x,y1,y2,y3,y4){
   like <-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
   like.max<-max(like)
   like/like.max #normalized likelihood (on scale from 0 to 1) 
@@ -415,7 +415,7 @@ func_scalenormal<-function(x, mean, sd){
 
 func_plots <- function(yval, theta.mle, se){
 colors <- c("navy", "maroon")
-norm.like <-    stat_function(fun = func_normlike, args = list(y1=yval[1], y2=yval[2], y3=yval[3], y4=yval[4]), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
+norm.like <-    stat_function(fun = func_scalelike, args = list(y1=yval[1], y2=yval[2], y3=yval[3], y4=yval[4]), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
 normal.approx <-stat_function(fun = func_scalenormal, args = list(mean=theta.mle, sd=se), lwd = 2.5, linetype="dotted", aes(col="Normal Approximation"))
 
 print.yval <- paste(yval, collapse=", ")

@@ -1,0 +1,34 @@
+---
+title: "normalized plots"
+output: html_document
+---
+
+```{r p4-graph}
+yval <- c(14, 0, 1, 5)
+
+func_like<-function(x,yvec){
+  (2+x)^yvec[1]*(1-x)^(yvec[2]+yvec[3])*(x)^yvec[4]
+}
+
+func_normlike <- function(x, yvec){
+  if ((2+x)^yvec[1]*(1-x)^(yvec[2]+yvec[3])*(x)^yvec[4] < 0) {0} else {(2+x)^yvec[1]*(1-x)^(yvec[2]+yvec[3])*(x)^yvec[4]}
+}
+
+
+func_scalelike<-function(x,yvec){
+  scales::rescale(func_normlike(x, yvec), to=c(0, 1))
+}
+
+func_normlike(1.5, yval)
+
+```
+
+```{r}
+norm.like <-    stat_function(fun = func_scalelike, args =list(yvec=yval), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
+
+x <- seq(0, 1.05, 0.001)
+df <- data.frame("X"=x)
+ggplot(data=df, aes(x=X))+
+  norm.like
+```
+
