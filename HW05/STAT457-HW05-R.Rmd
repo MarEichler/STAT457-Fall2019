@@ -172,25 +172,27 @@ $$
 $$
 ```{r p1c}
 blue <- matrix(c(14, 2, 4, 4), nrow=2)
-test <- fisher.test(blue, or=1, alternative="greater")
+test <- fisher.test(blue, or=1, alternative="less")
 test
-paste("Probabilitiy that log differences are greater than 0:", decimal(1 - test$p.value, dec))
+paste("Probability that log differences are greater than 0:", decimal(1 - test$p.value, dec))
 ```
 
 The Fisher Exact test produces a a probability that is lower than the methods in (1a) and (1b).  
 
 \newpage  
 ### Problem 1d  
-Is deliquency releated to birth order? 
-```{r 1d-counts}
+Is delinquency related to birth order? 
+
+```{r 1d-props}
 alpha <- c(127, 123,  93, 17)/360 #most delinquent
 gamma <- c(345, 209, 158, 65)/777 #least delinquent
 parameters <- rbind(alpha, gamma)
 total <- c(sum(alpha), sum(gamma))
-table.count <- decimal(cbind(parameters, total), dec)
-rownames(table.count) <- c("Most Delinquent", "Least Delinquent")
-colnames(table.count) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
-knitr::kable(table.count, booktabs=TRUE, 'latex', caption="Row Proportion") %>%
+diff <- .5*c(alpha-gamma, sum(alpha-gamma))
+table <- rbind( cbind(parameters, total), diff)
+rownames(table) <- c("Most Delinquent", "Least Delinquent", "(1/2)Difference (Most - Least)")
+colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption="Row Proportion") %>%
   kableExtra::kable_styling(latex_options="hold_position" )
 ```
 
@@ -269,7 +271,7 @@ knitr::kable(combined.pvals, booktabs=T, 'latex', caption=title) %>%
 
 ```
 
-There is evidence that birth order has an effect on deliquency rates.  
+There is evidence that birth order has an effect on delinquency rates.  There may be an argument that younger brothers are more delinquent, but my younger brother is not a delinquent (anecdotal evidence!).  
 
 
 
@@ -284,7 +286,7 @@ $$
 \\
 \text{Let } g(\hat{p}) & = 2\sin^{-1}\sqrt{\hat{p}}
 \\
-\sqrt{n} \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \sigma^2 [ g'(p)]^2 \right) 
+ \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \sigma^2 [ g'(p)]^2 \right) 
 \\
 \sigma^2 & = \tfrac{ p(1 - p)}{n} 
 \\
@@ -294,24 +296,24 @@ g'(p) & = \frac{ 1}{ \sqrt{1- p} \sqrt{p}}
 \\[0.5ex]
 \sigma^2 [g'(p)]^2 & = \frac{ p(1 - p)}{n} \cdot \frac{1}{(1 - p)p}  = \frac{1}{n}
 \\[0.5ex]
-\sqrt{n} \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \tfrac{1}{n} \right) 
+ \left( g(\hat{p})- g(p) \right) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \ \tfrac{1}{n} \right) 
 \\
-g(\hat{p}) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( g(\hat{p}), \ 1 \right)
+g(\hat{p}) & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( g(\hat{p}), \ \frac{1}{n} \right)
 \\
-2\sin^{-1}\sqrt{\hat{p}} & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 2\sin^{-1}\sqrt{p}\ ,\ 1 \right)
+2\sin^{-1}\sqrt{\hat{p}} & \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 2\sin^{-1}\sqrt{p}\ ,\ \frac{1}{n} \right)
 \end{aligned} 
 $$
 
-\newpage 
 ## Problem 3  
 Let $x_1, \cdots, x_n$ be an iid sample from $\mathcal{N}(\theta, 1)$ and let $y_1, \cdots , y_n$ be an independent iid sample from $\mathcal{N}(\phi, 1)$.  Derive the distribution of $\overline{x} / \overline{y}$ (where $\overline{y} \neq 0$) via the delta method.  
 $$
 \begin{aligned}
-\overline{x} & \sim \mathcal{N}(\theta, \nicefrac{1}{n}) \\
-\overline{y} & \sim \mathcal{N}(\phi, \nicefrac{1}{n}) \\
-\text{Let } h(x, y) & =  x / y \\ 
-\text{Let } h(B) & = \overline{x} / \overline{y} \\
-\text{Let } h(\beta) & = \theta / \phi \\
+\overline{x} & \sim \mathcal{N}(\theta, \nicefrac{1}{n}) 
+\\
+\overline{y} & \sim \mathcal{N}(\phi, \nicefrac{1}{n}) 
+\\
+\text{Let } h(x, y) & =  x / y \quad \text{so} \quad h(B)  = \overline{x} / \overline{y} \quad \text{and} \quad  h(\beta)  = \theta / \phi 
+\\
 \sqrt{n} \left(h(B) - h(\beta) \right) &
 \stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \nabla h (\beta)^T \cdot \Sigma \cdot \nabla h(\beta) \right) 
 \\[0.5ex]
@@ -321,19 +323,18 @@ $$
 \frac{ \partial h}{ \partial x} &
 \frac{ \partial h}{ \partial y} 
 \end{matrix} \right]_{\theta, \phi} 
-\\[0.5ex]
-& = \left[ \begin{matrix}
+ = 
+ \left[ \begin{matrix}
 \frac{1}{y} &
 - \frac{x}{y^2}
 \end{matrix} \right]_{\theta, \phi} 
-\\[0.5ex]
-&=
+=
 \left[ \begin{matrix}
 \frac{1}{\phi} &
 - \frac{\theta}{\phi^2}
 \end{matrix} \right]
 \\[1ex]
-\nabla h (\beta)^T \cdot \Sigma \cdot \nabla & =
+\nabla h (\beta)^T \cdot \Sigma \cdot \nabla h (\beta) & =
 \left[ \begin{matrix}
 \frac{1}{\phi} &
 - \frac{\theta}{\phi^2}
@@ -354,15 +355,15 @@ $$
 - \frac{\theta}{\phi^2}
 \end{matrix} \right]
 \\
-& = \frac{1}{n} \left( \frac{ 1}{\phi^2} - \frac{ \sigma^2}{\phi^4} \right)
+& = \frac{1}{n} \left( \frac{ 1}{\phi^2} - \frac{ \theta^2}{\phi^4} \right)
 \\[2ex]
 \sqrt{n} \left(\nicefrac{ \overline{x}}{\overline{y}} - \nicefrac{\theta}{\phi} \right) &
-\stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \frac{1}{n} \left( \frac{ 1}{\phi^2} - \frac{ \sigma^2}{\phi^4} \right) \right) 
+\stackrel{\mathcal{D}}{\to} \mathcal{N} \left( 0, \frac{1}{n} \left( \frac{ 1}{\phi^2} - \frac{ \theta^2}{\phi^4} \right) \right) 
 \\[1ex]
 \frac{ \overline{x}}{\overline{y}} & \stackrel{\mathcal{D}}{\to}
 \mathcal{N} \left( 
 \frac{\theta}{\phi}, \ 
-\frac{ 1}{\phi^2} - \frac{ \sigma^2}{\phi^4}
+ \frac{1}{n^2} \left( \frac{ 1}{\phi^2} - \frac{ \theta^2}{\phi^4} \right) 
 \right)
 \end{aligned} 
 $$
