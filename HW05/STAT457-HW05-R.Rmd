@@ -179,34 +179,99 @@ paste("Probabilitiy that log differences are greater than 0:", decimal(1 - test$
 
 The Fisher Exact test produces a a probability that is lower than the methods in (1a) and (1b).  
 
+\newpage  
 ### Problem 1d  
-Add delinquency problem. 
+Is deliquency releated to birth order? 
+```{r 1d-counts}
+alpha <- c(127, 123,  93, 17)/360 #most delinquent
+gamma <- c(345, 209, 158, 65)/777 #least delinquent
+parameters <- rbind(alpha, gamma)
+total <- c(sum(alpha), sum(gamma))
+table.count <- decimal(cbind(parameters, total), dec)
+rownames(table.count) <- c("Most Delinquent", "Least Delinquent")
+colnames(table.count) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
+knitr::kable(table.count, booktabs=TRUE, 'latex', caption="Row Proportion") %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
+```
 
-```{r 1d-delinquency}
+```{r 1d-function}
+func_diff <- function(matrix){
+diff.matrix <- cbind( #most - least
+   matrix[,1] - matrix[,5] #diff for Oldest
+  ,matrix[,2] - matrix[,6] #diff for in-between
+  ,matrix[,3] - matrix[,7] #diff for youngest
+  ,matrix[,4] - matrix[,8] #diff for only-child
+   )
+diff.matrix
+}
 
-alpha.count <- c(127, 123,  93, 17)
-gamma.count <- c(345, 209, 158, 65)
-parameters <- cbind(alpha.count, gamma.count)
+func_values <- function(vec){
+  it <- length(vec)
+  CI.val <- decimal(quantile(vec, c(0.025, 0.975)), dec)
+  CI.95 <- paste("(", paste(CI.val, collapse=", "), ")")
+  mean <- decimal(mean(vec), dec)
+  pval <- length(vec[vec > 0])/it 
+  vec <- c(it, mean, CI.95, pval)
+  vec
+}
 
-it <- 5
 func_delinq <- function(it){
 set.seed(050104)
-proportions <- rdirichlet(it, parameters)
-oldest.diff <- proportions[,1] - proportions[,5] #most delinq. oldest - least delinq. oldest 
-CI.val <- decimal(quantile(oldest.diff, c(0.025, 0.975)), dec)
-CI.95 <- paste("(", paste(CI.val, collapse=", "), ")")
-mean <- decimal(mean(oldest.diff), dec)
-vec <- c(it, mean, CI.95)
-vec}
-
-it.vec <- c(1e04, 1e05, 1e06)
-dt <- sapply(it.vec, func_delinq )
-rownames(dt) <- c("Iterations", "Mean", "95% CI")
-knitr::kable(dt, booktabs=T, 'latex', caption="Difference in Proportion Amoung Oldest: Most - Least") %>%
-  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
-
+prop <- rdirichlet(it, t(parameters))
+diff <- cbind( #most - least
+   prop[,1] - prop[,5] #diff for Oldest
+  ,prop[,2] - prop[,6] #diff for in-between
+  ,prop[,3] - prop[,7] #diff for youngest
+  ,prop[,4] - prop[,8] #diff for only-child
+   )
+apply(diff, 2, func_values)
+}
 
 ```
+
+```{r 1d-calculation}
+it.vec <- c(1e04, 1e05, 1e06)
+it.1 <- func_delinq(it.vec[1])
+it.2 <- func_delinq(it.vec[2])
+it.3 <- func_delinq(it.vec[3])
+```
+
+```{r 1d-tables}
+func_table <- function(i, name){
+table <- cbind(it.1[,i], it.2[,i] , it.3[,i])
+rownames(table) <- c("Iterations", "Mean", "95% CI", "P(diff>0)")
+title <- paste("Difference in Proportion for", name, ": Most Delinquent - Least Delinquent")
+knitr::kable(table, booktabs=T, 'latex', caption=title) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
+}
+
+func_table(1, "Oldest")
+func_table(2, "In-Between")
+func_table(3, "Youngest")
+func_table(4, "Only")
+```
+
+```{r 1d-chisqtest}
+func_pval.chisq <- function(pvals){
+  x <- -2*sum(log(as.numeric(pvals)))
+  combined.pval <-  pnorm(x, 2*length(pvals))
+}
+
+pvals.vec <- cbind(it.1[4,], pval.2 <- it.2[4,], pval.3 <- it.3[4,])
+
+combined <- apply(pvals.vec, 2, func_pval.chisq)
+combined.pvals <- rbind(it.vec, decimal(combined, dec))
+rownames(combined.pvals) <- c("Iterations", "Combined p-value")
+
+title <- paste("Combined p-values:","$X = -2\\sum_{i=1}^4(p_i) \\sim \\chi^2_{df=8}$")
+knitr::kable(combined.pvals, booktabs=T, 'latex', caption=title) %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
+
+```
+
+There is evidence that birth order has an effect on deliquency rates.  
+
+
 
 
 
