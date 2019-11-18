@@ -24,11 +24,22 @@ func_normlike(1.5, yval)
 ```
 
 ```{r}
-norm.like <-    stat_function(fun = func_scalelike, args =list(yvec=yval), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
-
-x <- seq(0, 1.05, 0.001)
+x <- c(0, 1, 2, 3, 4, 5)
 df <- data.frame("X"=x)
+df[df<3]
+```
+
+
+```{r}
+x <- seq(0, 1.0, 0.001)
+df <- data.frame("X"=x)
+
+norm.like <-    stat_function(fun = func_normlike, args =list(yvec=yval), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
+normal.approx <-stat_function(fun = dnorm, args = list(mean=0.9, sd=.09), lwd = 2.5, linetype="dotted", aes(col="Normal Approximation"))
+
+
 ggplot(data=df, aes(x=X))+
-  norm.like
+  norm.like+
+  normal.approx
 ```
 
