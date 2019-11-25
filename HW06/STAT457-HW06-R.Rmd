@@ -19,6 +19,7 @@ geometry: "left=1.75cm,right=1.75cm,top=1.5cm,bottom=2cm"
 
 \captionsetup[table]{labelformat=empty} 
 ```{r setup, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+rm(list=ls()) ### To clear namespace
 library(ggplot2) #ggplot
 library(readr) #import CSV
 library(gridExtra) #organize plots
@@ -36,19 +37,18 @@ dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
 ```
 
-## Problem 3  
-For the genetic linkage model:  
 
+\newpage  
 ### Problem 3a  
-Use importance sampling to obtain the posterior mean for data $Y = (125, 18, 20, 34)$.  Use the matching normal distribution as the importance function.  Compare your importance sampling estimates of the posterior mean to those obtained via Laplace's method.  Draw the histogram of the weights and compute their standard deviation.  
-$$
-\text{Normal Approximation for } Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.62682, \ \sigma=0.05382)
-$$
-```{r p3_functions}
-func_Like.Y <- function(x, yvec){
+For the genetic linkage model: use importance sampling to obtain the posterior mean for data $Y = (125, 18, 20, 34)$.  Use the matching normal distribution as the importance function.  Compare your importance sampling estimates of the posterior mean to those obtained via Laplace's method.  Draw the histogram of the weights and compute their standard deviation.  Normal Approxiamation for $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.62682, \ \sigma=0.05382)$  
+```{r p3func-Old, eval=FALSE, echo=FALSE}
+func_loglike.Y <- function(x, yvec){
   yvec[1]*log(x + 2) + (yvec[2]+yvec[3])*log(1 - x) + yvec[4]*log(x) 
 }
 
+func_Like.Y <- function(x, yvec){
+  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
+}
 
 func_w.star <- function(it, Y.vec, N.mu, N.sig){
 w <- rnorm(it, N.mu, N.sig)
@@ -82,6 +82,7 @@ table <- tableGrob(round(compare, dec))
 
 plot <- ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
   ggtitle(paste(name))+
+  ylim(0, 3e05)+
   annotate('text', x=-Inf, y=Inf, label=paste("W.star sd=", round(sd_w.star, 10)), vjust=2, hjust=-.5, size=4)+
   xlab(TeX("$w^*$=weights"))
 
@@ -91,47 +92,240 @@ grid.arrange(grobs=gs, nrow=1, widths=2:1, top0=textGrob(paste(it, "Iterations")
              #top=paste(it, "Iterations"))
 }
 
-func_alltogethernow <- function(it.vec, Y.vec, N.mu, N.sig){
-df<- func_w.star(it.vec[1], Y.vec, N.mu, N.sig)
+func_alltogethernow <- function(it, Y.vec, N.mu, N.sig){
+df<- func_w.star(it, Y.vec, N.mu, N.sig)
 compare <- func_compare(df$w, df$w.star, N.mu, N.sig)
 func_histogram(df$w.star, Y.vec, compare)
 }
 ```
 
 
-```{r 3a, fig.height=3, warning=FALSE, message=FALSE }
+```{r p3ab_function}
+func_Like.Y <- function(x, yvec){
+  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
+}
+
+
+func_ifoutside <- function(x){
+  y <- 0
+  if (x>1 | x<0) {y=0} 
+  else {y=x}
+  return(y)
+}
+
+
+func_g <- function(w){
+  y <- 0
+  if (w==0) {y =0}
+  else {y =func_Like.Y(w, Y.vec)/w}
+  return(w)
+}
+
+
+func_w.star <- function(it, Y.vec, N.mu, N.sig){
+w <- rnorm(it, N.mu, N.sig)
+#randomly draw w_i's
+w <- sapply(w, func_ifoutside)
+#for if w not in [0, 1]
+g_w <- sapply(w, func_g)
+#function g(w_i)'s where g(x) = log likelihood / w_i 
+w.star <- g_w / sum(g_w)
+#w.star = weights = g(x)/sum(g(x))
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_compare <- function(w, w.star, N.mu, N.sig){
+  it <- length(w)
+  J <- sum(w.star*w)
+  sd_J <- sqrt(sum(w.star*(w - J)^2))
+  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
+  rownames(compare) <- c("mean", "sd") 
+  return(compare)
+}
+
+func_plotsAB <- function(it.vec, Y.vec, N.mu, N.sig){
+
+df1 <- func_w.star(it.vec[1], Y.vec, N.mu, N.sig)
+df2 <- func_w.star(it.vec[2], Y.vec, N.mu, N.sig)
+df3 <- func_w.star(it.vec[3], Y.vec, N.mu, N.sig)
+
+compare1 <- func_compare(df1$w, df1$w.star, N.mu, N.sig)
+compare2 <- func_compare(df2$w, df2$w.star, N.mu, N.sig)
+compare3 <- func_compare(df3$w, df3$w.star, N.mu, N.sig)
+
+table1 <- tableGrob(round(compare1, dec))
+table2 <- tableGrob(round(compare2, dec))
+table3 <- tableGrob(round(compare3, dec))
+
+big.df <- rbind(df1, df2, df3)
+
+dat_text <- data.frame(label =c(
+                paste("w.star sd=", round(sd(df1$w.star), 10)),
+                paste("w.star sd=", round(sd(df2$w.star), 10)),
+                paste("w.star sd=", round(sd(df3$w.star), 10))
+                ),
+                       Iteration = it.vec)
+
+df_w.star <- data.frame("w.star"=big.df$w.star, "Iteration"=big.df$it )
+print.Y.vec <- paste(Y.vec, collapse=",")
+name <- paste("Important Sampling Weights for Y=(", print.Y.vec, ")")
+
+plot <-  ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
+   facet_wrap(~Iteration, ncol=3)+
+  ggtitle(paste(name))+
+  theme( axis.text.x=element_blank()
+        ,axis.text.y=element_blank()
+        )+
+  geom_text(data=dat_text, mapping=aes(x=Inf, y = Inf, label=label), hjust=1.5, vjust=2, size=4)+
+  xlab(TeX("$w^*$=weights"))
+
+gs <- list(plot, table1, table2, table3)
+grid.arrange(grobs=gs, 
+              widths = c(1, 1, 1), 
+              heights =2:1,
+              layout_matrix = rbind( c(1, 1, 1),
+                                     c(2, 3, 4)
+ ))
+}
+```
+
+
+
+```{r p3a, fig.height=5, warning=FALSE, message=FALSE}
 set.seed(060301)
 Y.vec <- c(125, 18, 20, 34)
 N.mu  <- 0.62682
 N.sig <- 0.05382
+it.vec <- c(1e04, 1e05, 1e06)
 
-func_alltogethernow(1e04, Y.vec, N.mu, N.sig)
-func_alltogethernow(1e05, Y.vec, N.mu, N.sig)
-func_alltogethernow(1e06, Y.vec, N.mu, N.sig)
+func_plotsAB(it.vec, Y.vec, N.mu, N.sig)
 ```
 
 
 ### Problem 3b  
-Repeat (a) for the data $Y = (14, 0, 1, 5)$.  Compare the histograms of the weights for both data sets.  Discuss the adequacy of important sampling estimate for each data set.  
-$$
-\text{Normal Approximation for } Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.90344, \ \sigma=0.09348)
-$$
+Repeat (a) for the data $Y = (14, 0, 1, 5)$.  Normal Approximation for $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.90344, \ \sigma=0.09348)$
 
-```{r 3b, fig.height=3, warning=FALSE, message=FALSE }
+```{r p3b, fig.height=5, warning=FALSE, message=FALSE}
 set.seed(060302)
-Y.vec <- c(14, 0,1,5)
+Y.vec <- c(14,0,1,5)
 N.mu  <- 0.90344
 N.sig <- 0.09348
+it.vec <- c(1e04, 1e05, 1e06)
 
-func_alltogethernow(1e04, Y.vec, N.mu, N.sig)
-func_alltogethernow(1e05, Y.vec, N.mu, N.sig)
-func_alltogethernow(1e06, Y.vec, N.mu, N.sig)
+func_plotsAB(it.vec, Y.vec, N.mu, N.sig)
 ```
+Using a normal important sampling function to estiamte the posterior mean is closer for $Y=(125, 18, 20, 34)$ normal approximation than $Y=(14, 0, 1, 5)$.  This makes sense as in the last homework, we showed the likelihood for the first data follows the approximate normal distribution very closely whereas the second data likelihood did not follow the normal approximation well.  
 
-
+\newpage  
 ### Problem 3c  
 Repeat (a) and (b) with a Uniform[0, 1] importance function.  
 
+```{r p3C_function}
+func_Like.Y <- function(x, yvec){
+  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
+}
+
+
+func_ifoutside <- function(x){
+  y <- 0
+  if (x>1 | x<0) {y=0} 
+  else {y=x}
+  return(y)
+}
+
+
+func_g <- function(w){
+  y <- 0
+  if (w==0) {y =0}
+  else {y =func_Like.Y(w, Y.vec)/w}
+  return(w)
+}
+
+
+func_w.star <- function(it, Y.vec){
+w <- runif(it, 0, 1)
+#randomly draw w_i's
+w <- sapply(w, func_ifoutside)
+#for if w not in [0, 1]
+g_w <- sapply(w, func_g)
+#function g(w_i)'s where g(x) = log likelihood / w_i 
+w.star <- g_w / sum(g_w)
+#w.star = weights = g(x)/sum(g(x))
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_compare <- function(w, w.star, N.mu, N.sig){
+  it <- length(w)
+  J <- sum(w.star*w)
+  sd_J <- sqrt(sum(w.star*(w - J)^2))
+  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
+  rownames(compare) <- c("mean", "sd") 
+  return(compare)
+}
+
+func_plotsC <- function(it.vec, Y.vec){
+
+df1 <- func_w.star(it.vec[1], Y.vec)
+df2 <- func_w.star(it.vec[2], Y.vec)
+df3 <- func_w.star(it.vec[3], Y.vec)
+
+compare1 <- func_compare(df1$w, df1$w.star, N.mu, N.sig)
+compare2 <- func_compare(df2$w, df2$w.star, N.mu, N.sig)
+compare3 <- func_compare(df3$w, df3$w.star, N.mu, N.sig)
+
+table1 <- tableGrob(round(compare1, dec))
+table2 <- tableGrob(round(compare2, dec))
+table3 <- tableGrob(round(compare3, dec))
+
+big.df <- rbind(df1, df2, df3)
+
+dat_text <- data.frame(label =c(
+                paste("w.star sd=", round(sd(df1$w.star), 10)),
+                paste("w.star sd=", round(sd(df2$w.star), 10)),
+                paste("w.star sd=", round(sd(df3$w.star), 10))
+                ),
+                       Iteration = it.vec)
+
+df_w.star <- data.frame("w.star"=big.df$w.star, "Iteration"=big.df$it )
+print.Y.vec <- paste(Y.vec, collapse=",")
+name <- paste("Important Sampling Weights for Y=(", print.Y.vec, ")")
+
+plot <-  ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
+   facet_wrap(~Iteration, ncol=3)+
+  ggtitle(paste(name))+
+  theme( axis.text.x=element_blank()
+        ,axis.text.y=element_blank()
+        )+
+  geom_text(data=dat_text, mapping=aes(x=Inf, y = Inf, label=label), hjust=1.5, vjust=2, size=4)+
+  xlab(TeX("$w^*$=weights"))
+
+gs <- list(plot, table1, table2, table3)
+grid.arrange(grobs=gs, 
+              widths = c(1, 1, 1), 
+              heights =2:1,
+              layout_matrix = rbind( c(1, 1, 1),
+                                     c(2, 3, 4)
+ ))
+}
+```
+
+
+```{r p3c, fig.height=5, warning=FALSE, message=FALSE}
+set.seed(060303)
+Y.vec1 <- c(125, 18, 20, 34)
+Y.vec2 <- c(14, 0, 1,5)
+it.vec <- c(1e04, 1e05, 1e06)
+
+func_plotsC(it.vec, Y.vec1)
+func_plotsC(it.vec, Y.vec2)
+```
+Note that the histograms of the weights, $w^*$, are the same for both sets of data.  This is because the importance function is not dependent on the data (like it was for when using the normal approximation data for a norma importance function). 
+
+\newpage  
 ## Problem 4  
 
 ### Problem 4a  
