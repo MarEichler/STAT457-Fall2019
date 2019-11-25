@@ -36,3 +36,133 @@ dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
 ```
 
+## Problem 3  
+For the genetic linkage model:  
+
+### Problem 3a  
+Use importance sampling to obtain the posterior mean for data $Y = (125, 18, 20, 34)$.  Use the matching normal distribution as the importance function.  Compare your importance sampling estimates of the posterior mean to those obtained via Laplace's method.  Draw the histogram of the weights and compute their standard deviation.  
+$$
+\text{Normal Approximation for } Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.62682, \ \sigma=0.05382)
+$$
+```{r p3_functions}
+func_Like.Y <- function(x, yvec){
+  yvec[1]*log(x + 2) + (yvec[2]+yvec[3])*log(1 - x) + yvec[4]*log(x) 
+}
+
+
+func_w.star <- function(it, Y.vec, N.mu, N.sig){
+w <- rnorm(it, N.mu, N.sig)
+#randomly draw w_i's
+g_w <- func_Like.Y(w, Y.vec) / w
+#function g(w_i)'s where g(x) = log likelihood / w_i 
+w.star <- g_w / sum(g_w)
+#w.star = weights = g(x)/sum(g(x))
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_compare <- function(w, w.star, N.mu, N.sig){
+  it <- length(w)
+  J <- sum(w.star*w)
+  sd_J <- sqrt(sum(w.star*(w - J)^2))
+  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
+  rownames(compare) <- c("mean", "sd") 
+  return(compare)
+}
+
+func_histogram <- function(w.star, Y.vec, compare){
+it <- length(w.star)
+sd_w.star <- sd(w.star)
+df_w.star <- data.frame("w.star"=w.star)
+print.Y.vec <- paste(Y.vec, collapse=",")
+name <- paste("Important Sampling Weights for Y=(", print.Y.vec, ")")
+
+table <- tableGrob(round(compare, dec)) 
+
+plot <- ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
+  ggtitle(paste(name))+
+  annotate('text', x=-Inf, y=Inf, label=paste("W.star sd=", round(sd_w.star, 10)), vjust=2, hjust=-.5, size=4)+
+  xlab(TeX("$w^*$=weights"))
+
+
+gs <- list(plot, table)
+grid.arrange(grobs=gs, nrow=1, widths=2:1, top0=textGrob(paste(it, "Iterations"), gp=gpar(fontsize=15, font=10)))
+             #top=paste(it, "Iterations"))
+}
+
+func_alltogethernow <- function(it.vec, Y.vec, N.mu, N.sig){
+df<- func_w.star(it.vec[1], Y.vec, N.mu, N.sig)
+compare <- func_compare(df$w, df$w.star, N.mu, N.sig)
+func_histogram(df$w.star, Y.vec, compare)
+}
+```
+
+
+```{r 3a, fig.height=3, warning=FALSE, message=FALSE }
+set.seed(060301)
+Y.vec <- c(125, 18, 20, 34)
+N.mu  <- 0.62682
+N.sig <- 0.05382
+
+func_alltogethernow(1e04, Y.vec, N.mu, N.sig)
+func_alltogethernow(1e05, Y.vec, N.mu, N.sig)
+func_alltogethernow(1e06, Y.vec, N.mu, N.sig)
+```
+
+
+### Problem 3b  
+Repeat (a) for the data $Y = (14, 0, 1, 5)$.  Compare the histograms of the weights for both data sets.  Discuss the adequacy of important sampling estimate for each data set.  
+$$
+\text{Normal Approximation for } Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.90344, \ \sigma=0.09348)
+$$
+
+```{r 3b, fig.height=3, warning=FALSE, message=FALSE }
+set.seed(060302)
+Y.vec <- c(14, 0,1,5)
+N.mu  <- 0.90344
+N.sig <- 0.09348
+
+func_alltogethernow(1e04, Y.vec, N.mu, N.sig)
+func_alltogethernow(1e05, Y.vec, N.mu, N.sig)
+func_alltogethernow(1e06, Y.vec, N.mu, N.sig)
+```
+
+
+### Problem 3c  
+Repeat (a) and (b) with a Uniform[0, 1] importance function.  
+
+## Problem 4  
+
+### Problem 4a  
+Solve the following problem posted by the Reverend Thomas Bayes in his essay "Essay Towards Solving a Problem in the Doctrine of Chances," which was published in the *Philosophical Transactions of the Royal Society* (London) in 1763:  
+*Given* the number of times in which an unknown event has happened and failed: *Required* the chance that the probability of its happening in a single trial lies somewhere between any tow degrees of probability that can be named.  
+In other words, if the number of the successful happenings of the event is $p$ and the failures $q$, and if the named "degrees" of the probability are $b$ and $f$, respectively, compute: 
+$$
+\left. 
+\int_{b}^f x^p (1 - x)^q dx \right/ \int_{0}^1 x^p (1 - x)^q dx
+$$
+via important sampling.  Take $p=1, \ q=5, \ b=0.7, \ f = 0.9$.  
+
+### Problem 4b  
+Repeat the calculation using numerical integration.  Compare the results of (a) and (b).  
+
+## Problem 6a  
+Under the likelihood $\theta^k (1 - \theta)^{n-x}$ and the Beta$(a, b)$ prior ($a$ and $b$ known) compute the exact posterior mean.  Repeat the calculation using the second-order Laplace approximation.  evaluate the relative error for the data $n=5, \ x = 3$ and the prior values $a = b = \nicefrac{1}{2}$.  What is the relative error when $n = 25, \ x = 15$ (same prior)?  
+
+## Problem 1  
+Recall the genetic linkage model of Section 4.1.  
+
+### Problem 1a  
+For the data $Y = (125, 18, 202, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge for all of these starting values? How do you access convergence?  How many iterations were required for convergence? 
+
+### Problem 1c  
+Plot the normal approximation along with the normalized likelihood.  Is the normal approximation appropriate in this case?  
+
+### Problem 1d  
+Repeat (a) and (c) for the data $Y = (14, 0, 1, 5)$.  did the algorithm coverage for all of the above starting values?  
+
+## Problem 2  
+Repeat Problem 1 (a) and (d) using the Monte Carlo *EM*.  How did you assess convergence.  
+
+
