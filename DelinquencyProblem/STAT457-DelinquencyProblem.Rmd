@@ -28,7 +28,7 @@ library(gtable) #for tablegrob functions
 library(dplyr) #for piping 
 library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
-#knitr::opts_chunk$set(echo=FALSE)
+knitr::opts_chunk$set(echo=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
@@ -37,17 +37,17 @@ dec <- 5
 Is delinquency related to birth order? 
 
 ```{r props}
-alpha <- c(127, 123,  93, 17)/360 #most delinquent
-gamma <- c(345, 209, 158, 65)/777 #least delinquent
+alpha <- c(127, 123,  93, 17) #/360 #most delinquent
+gamma <- c(345, 209, 158, 65) #/777 #least delinquent
 parameters <- rbind(alpha, gamma)
 total <- c(sum(alpha), sum(gamma))
-diff <- .5*c(alpha-gamma, sum(alpha-gamma))
+diff <- c(alpha-gamma, sum(alpha-gamma))
 table <- rbind( cbind(parameters, total), diff)
-rownames(table) <- c("Most Delinquent", "Least Delinquent", "(1/2)Difference (Most - Least)")
+rownames(table) <- c("Most Delinquent", "Least Delinquent", "Difference (Most - Least)")
 colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
-#knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption="Row Proportion") %>%
-#  kableExtra::kable_styling(latex_options="hold_position" )
-table
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption="Row Proportion") %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
+
 ```
 
 ```{r function}
@@ -97,9 +97,9 @@ func_table <- function(i, name){
 table <- cbind(it.1[,i], it.2[,i] , it.3[,i])
 rownames(table) <- c("Iterations", "Mean", "95% CI", "P(diff>0)")
 title <- paste("Difference in Proportion for", name, ": Most Delinquent - Least Delinquent")
-table
-#knitr::kable(table, booktabs=T, 'latex', caption=title) %>%
-#  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
+#table
+knitr::kable(table, booktabs=T, 'latex', caption=title) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
 }
 
 func_table(1, "Oldest")
