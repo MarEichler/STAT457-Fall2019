@@ -6,7 +6,7 @@ output:
   pdf_document:
     fig_caption: yes
 header-includes:
-  - \usepackage{color}
+  - \usepackage{xcolor}
   - \usepackage{mathtools}
   - \usepackage{amsbsy} #bold in mathmode
   - \usepackage{nicefrac} # for nice fracs 
@@ -32,6 +32,7 @@ library(gtable) #for tablegrob functions
 library(dplyr) #for piping 
 library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(echo=FALSE, fig.width = 10, fig.height = 4)
+#knitr::opts_chunk$set(eval=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
@@ -41,64 +42,6 @@ dec <- 5
 \newpage  
 ### Problem 3a  
 For the genetic linkage model: use importance sampling to obtain the posterior mean for data $Y = (125, 18, 20, 34)$.  Use the matching normal distribution as the importance function.  Compare your importance sampling estimates of the posterior mean to those obtained via Laplace's method.  Draw the histogram of the weights and compute their standard deviation.  Normal Approxiamation for $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.62682, \ \sigma=0.05382)$  
-```{r p3func-Old, eval=FALSE, echo=FALSE}
-func_loglike.Y <- function(x, yvec){
-  yvec[1]*log(x + 2) + (yvec[2]+yvec[3])*log(1 - x) + yvec[4]*log(x) 
-}
-
-func_Like.Y <- function(x, yvec){
-  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
-}
-
-func_w.star <- function(it, Y.vec, N.mu, N.sig){
-w <- rnorm(it, N.mu, N.sig)
-#randomly draw w_i's
-g_w <- func_Like.Y(w, Y.vec) / w
-#function g(w_i)'s where g(x) = log likelihood / w_i 
-w.star <- g_w / sum(g_w)
-#w.star = weights = g(x)/sum(g(x))
-it.vec <- c(rep(it, it))
-df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
-return(df)
-}
-
-func_compare <- function(w, w.star, N.mu, N.sig){
-  it <- length(w)
-  J <- sum(w.star*w)
-  sd_J <- sqrt(sum(w.star*(w - J)^2))
-  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
-  rownames(compare) <- c("mean", "sd") 
-  return(compare)
-}
-
-func_histogram <- function(w.star, Y.vec, compare){
-it <- length(w.star)
-sd_w.star <- sd(w.star)
-df_w.star <- data.frame("w.star"=w.star)
-print.Y.vec <- paste(Y.vec, collapse=",")
-name <- paste("Important Sampling Weights for Y=(", print.Y.vec, ")")
-
-table <- tableGrob(round(compare, dec)) 
-
-plot <- ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
-  ggtitle(paste(name))+
-  ylim(0, 3e05)+
-  annotate('text', x=-Inf, y=Inf, label=paste("W.star sd=", round(sd_w.star, 10)), vjust=2, hjust=-.5, size=4)+
-  xlab(TeX("$w^*$=weights"))
-
-
-gs <- list(plot, table)
-grid.arrange(grobs=gs, nrow=1, widths=2:1, top0=textGrob(paste(it, "Iterations"), gp=gpar(fontsize=15, font=10)))
-             #top=paste(it, "Iterations"))
-}
-
-func_alltogethernow <- function(it, Y.vec, N.mu, N.sig){
-df<- func_w.star(it, Y.vec, N.mu, N.sig)
-compare <- func_compare(df$w, df$w.star, N.mu, N.sig)
-func_histogram(df$w.star, Y.vec, compare)
-}
-```
-
 
 ```{r p3ab_function}
 func_Like.Y <- function(x, yvec){
@@ -118,7 +61,7 @@ func_g <- function(w){
   y <- 0
   if (w==0) {y =0}
   else {y =func_Like.Y(w, Y.vec)/w}
-  return(w)
+  return(y)
 }
 
 
@@ -128,7 +71,7 @@ w <- rnorm(it, N.mu, N.sig)
 w <- sapply(w, func_ifoutside)
 #for if w not in [0, 1]
 g_w <- sapply(w, func_g)
-#function g(w_i)'s where g(x) = log likelihood / w_i 
+#function g(w_i)'s where g(x) =  likelihood / w_i 
 w.star <- g_w / sum(g_w)
 #w.star = weights = g(x)/sum(g(x))
 it.vec <- c(rep(it, it))
@@ -138,9 +81,9 @@ return(df)
 
 func_compare <- function(w, w.star, N.mu, N.sig){
   it <- length(w)
-  J <- sum(w.star*w)
-  sd_J <- sqrt(sum(w.star*(w - J)^2))
-  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
+  post.mean <- sum(w.star*w)
+  post.sd <- sqrt(sum(w.star*(w - post.mean)^2))
+  compare <- data.frame("IS"=c(post.mean, post.sd), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(post.mean-N.mu, post.sd-N.sig))
   rownames(compare) <- c("mean", "sd") 
   return(compare)
 }
@@ -191,8 +134,6 @@ grid.arrange(grobs=gs,
 }
 ```
 
-
-
 ```{r p3a, fig.height=5, warning=FALSE, message=FALSE}
 set.seed(060301)
 Y.vec <- c(125, 18, 20, 34)
@@ -202,7 +143,6 @@ it.vec <- c(1e04, 1e05, 1e06)
 
 func_plotsAB(it.vec, Y.vec, N.mu, N.sig)
 ```
-
 
 ### Problem 3b  
 Repeat (a) for the data $Y = (14, 0, 1, 5)$.  Normal Approximation for $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.90344, \ \sigma=0.09348)$
@@ -240,7 +180,7 @@ func_g <- function(w){
   y <- 0
   if (w==0) {y =0}
   else {y =func_Like.Y(w, Y.vec)/w}
-  return(w)
+  return(y)
 }
 
 
@@ -250,7 +190,7 @@ w <- runif(it, 0, 1)
 w <- sapply(w, func_ifoutside)
 #for if w not in [0, 1]
 g_w <- sapply(w, func_g)
-#function g(w_i)'s where g(x) = log likelihood / w_i 
+#function g(w_i)'s where g(x) =  likelihood / w_i 
 w.star <- g_w / sum(g_w)
 #w.star = weights = g(x)/sum(g(x))
 it.vec <- c(rep(it, it))
@@ -260,9 +200,9 @@ return(df)
 
 func_compare <- function(w, w.star, N.mu, N.sig){
   it <- length(w)
-  J <- sum(w.star*w)
-  sd_J <- sqrt(sum(w.star*(w - J)^2))
-  compare <- data.frame("IS"=c(J, sd_J), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(J-N.mu, sd_J-N.sig))
+  post.mean<- sum(w.star*w)
+  post.sd <- sqrt(sum(w.star*(w - post.mean)^2))
+  compare <- data.frame("IS"=c(post.mean, post.sd), "Norm Apprx" =c(N.mu, N.sig), "Diff"=c(post.mean-N.mu, post.sd-N.sig))
   rownames(compare) <- c("mean", "sd") 
   return(compare)
 }
@@ -313,17 +253,18 @@ grid.arrange(grobs=gs,
 }
 ```
 
-
 ```{r p3c, fig.height=5, warning=FALSE, message=FALSE}
-set.seed(060303)
-Y.vec1 <- c(125, 18, 20, 34)
-Y.vec2 <- c(14, 0, 1,5)
 it.vec <- c(1e04, 1e05, 1e06)
 
-func_plotsC(it.vec, Y.vec1)
-func_plotsC(it.vec, Y.vec2)
+set.seed(0603031)
+Y.vec <- c(125, 18, 20, 34)
+func_plotsC(it.vec, Y.vec)
+
+set.seed(0603032)
+Y.vec <- c(14, 0, 1,5)
+func_plotsC(it.vec, Y.vec)
 ```
-Note that the histograms of the weights, $w^*$, are the same for both sets of data.  This is because the importance function is not dependent on the data (like it was for when using the normal approximation data for a norma importance function). 
+Note that the histograms of the weights, $w^*$, are very similar for both sets of data.  This is because the importance function is not dependent on the data (like it was for when using the normal approximation data for a norma importance function). 
 
 \newpage  
 ## Problem 4  
@@ -331,32 +272,218 @@ Note that the histograms of the weights, $w^*$, are the same for both sets of da
 ### Problem 4a  
 Solve the following problem posted by the Reverend Thomas Bayes in his essay "Essay Towards Solving a Problem in the Doctrine of Chances," which was published in the *Philosophical Transactions of the Royal Society* (London) in 1763:  
 *Given* the number of times in which an unknown event has happened and failed: *Required* the chance that the probability of its happening in a single trial lies somewhere between any tow degrees of probability that can be named.  
-In other words, if the number of the successful happenings of the event is $p$ and the failures $q$, and if the named "degrees" of the probability are $b$ and $f$, respectively, compute: 
-$$
-\left. 
-\int_{b}^f x^p (1 - x)^q dx \right/ \int_{0}^1 x^p (1 - x)^q dx
-$$
-via important sampling.  Take $p=1, \ q=5, \ b=0.7, \ f = 0.9$.  
+In other words, if the number of the successful happenings of the event is $p$ and the failures $q$, and if the named "degrees" of the probability are $b$ and $f$, respectively, compute: $\int_{b}^f x^p (1 - x)^q dx / \int_{0}^1 x^p (1 - x)^q dx$ via important sampling.  Take $p=1, \ q=4, \ b=0.7, \ f = 0.9$. 
+
+Let $J_1 = \int_{b}^f x^p (1 - x)^q dx$  
+
+```{r p4a-functions}
+func_Like.Y <- function(x){ x^1 * (1 - x)^4 }
+
+func_plots <- function(big.df, text.df, name){
+df_w.star <- data.frame("w.star"=big.df$w.star, "Iteration"=big.df$it )
+name <- paste(name, "Important Sampling")
+plot <-  ggplot(df_w.star, aes(w.star))+geom_histogram(aes(y=..density..), color="black", alpha=0.5)+
+   facet_wrap(~Iteration, ncol=3)+
+  ggtitle(paste(name))+
+  theme( axis.text.x=element_blank()
+        ,axis.text.y=element_blank()
+        )+
+  geom_text(data=text.df, mapping=aes(x=Inf, y = Inf, label=label), hjust=1.5, vjust=2, size=4)+
+  xlab(TeX("$w^*$=weights"))
+plot
+}
+```
+
+```{r p4a-Uniform, warning=FALSE, message=FALSE}
+func_J.Uniform <- function(it, b, f){
+x1 <- runif(it, b, f)
+J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
+return(c(J1))
+}
+
+func_w.star.Uniform <- function(it, b, f){
+w <- runif(it, b, f)
+g_w <- func_Like.Y(w) / w
+w.star <- g_w / sum(g_w)
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_big.df.Uniform <- function(it.vec, b, f){
+df1 <- func_w.star.Uniform(it.vec[1], b, f)
+df2 <- func_w.star.Uniform(it.vec[2], b, f)
+df3 <- func_w.star.Uniform(it.vec[3], b, f)
+big.df <- rbind(df1, df2, df3)
+}
+
+b <- 0.7
+f <- 0.9
+it.vec <- c(1e04, 1e05, 1e06)
+set.seed(0604011)
+IS.Uniform.J1 <- mapply(func_J.Uniform, it.vec, b, f)
+
+Uniform.df <- func_big.df.Uniform(it.vec, b, f)
+Uniform.text.df <- data.frame(label =c(
+                paste("J1=", round(IS.Uniform.J1[1], 10)),
+                paste("J1=", round(IS.Uniform.J1[2], 10)),
+                paste("J1=", round(IS.Uniform.J1[3], 10))
+                ),
+                       Iteration = it.vec)
+func_plots(Uniform.df, Uniform.text.df, "Uniform")
+
+```
+
+```{r p4a-Beta, warning=FALSE, message=FALSE}
+func_J.Beta <- function(it, b, f){
+x1 <- rbeta(it, b+1, f+1)
+J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
+return(c(J1))
+}
+
+func_w.star.Beta <- function(it, b, f){
+w <- rbeta(it, b+1, f+1)
+g_w <- func_Like.Y(w) / w
+w.star <- g_w / sum(g_w)
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_big.df.Beta <- function(it.vec, b, f){
+df1 <- func_w.star.Beta(it.vec[1], b, f)
+df2 <- func_w.star.Beta(it.vec[2], b, f)
+df3 <- func_w.star.Beta(it.vec[3], b, f)
+big.df <- rbind(df1, df2, df3)
+}
+
+b <- 0.7
+f <- 0.9
+it.vec <- c(1e04, 1e05, 1e06)
+set.seed(0604012)
+IS.Beta.J1 <- mapply(func_J.Beta, it.vec, b, f)
+
+Beta.df <- func_big.df.Beta(it.vec, b, f)
+Beta.text.df <- data.frame(label =c(
+                paste("J1=", round(IS.Beta.J1[1], 10)),
+                paste("J1=", round(IS.Beta.J1[2], 10)),
+                paste("J1=", round(IS.Beta.J1[3], 10))
+                ),
+                       Iteration = it.vec)
+func_plots(Beta.df, Beta.text.df, "Beta")
+```
+
+```{r p4a-Normal, warning=FALSE, message=FALSE}
+func_J.Normal <- function(it, b, f){
+alpha <- b + 1 
+beta <- f + 1
+mean <- alpha / (alpha + beta)
+var <- (alpha*beta) / ( (alpha + beta)^2 * (alpha + beta + 1) )
+x1 <- rnorm(it, mean, sqrt(var))
+J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
+return(c(J1))
+}
+
+func_w.star.Normal <- function(it, b, f){
+alpha <- b + 1 
+beta <- f + 1
+mean <- alpha / (alpha + beta)
+var <- (alpha*beta) / ( (alpha + beta)^2 * (alpha + beta + 1) )
+w <- rnorm(it, mean, sqrt(var))
+g_w <- func_Like.Y(w) / w
+w.star <- g_w / sum(g_w)
+it.vec <- c(rep(it, it))
+df <- data.frame("w"=w, "w.star"=w.star, "it"=it.vec)
+return(df)
+}
+
+func_big.df.Normal <- function(it.vec, b, f){
+df1 <- func_w.star.Normal(it.vec[1], b, f)
+df2 <- func_w.star.Normal(it.vec[2], b, f)
+df3 <- func_w.star.Normal(it.vec[3], b, f)
+big.df <- rbind(df1, df2, df3)
+}
+
+b <- 0.7
+f <- 0.9
+it.vec <- c(1e04, 1e05, 1e06)
+set.seed(0604012)
+IS.Normal.J1 <- mapply(func_J.Normal, it.vec, b, f)
+
+Normal.df <- func_big.df.Normal(it.vec, b, f)
+Beta.text.df <- data.frame(label =c(
+                paste("J1=", round(IS.Normal.J1[1], 10)),
+                paste("J1=", round(IS.Normal.J1[2], 10)),
+                paste("J1=", round(IS.Normal.J1[3], 10))
+                ),
+                       Iteration = it.vec)
+func_plots(Beta.df, Beta.text.df, "Normal")
+```
+
+$\text{\textcolor{red}{4A:OUTSTANDING}}$ 
 
 ### Problem 4b  
 Repeat the calculation using numerical integration.  Compare the results of (a) and (b).  
 
+```{r p4b}
+Integrate.J1 <- integrate(func_Like.Y, lower=b, upper=f)$value
+
+iteration <- c("N/A", it.vec)
+J1.vec <- c(Integrate.J1, IS.Uniform.J1, IS.Beta.J1)
+Integrate.J1.vec <- rep(Integrate.J1, length(J1.vec))
+diff.J1 <- J1.vec - Integrate.J1.vec
+
+result.4b <- rbind(iteration, round(J1.vec, 6), round(diff.J1, 6))
+rownames(result.4b) <- c("It", "J1", "J1-Intg")
+result.4b
+```
+```{r p4b-table}
+knitr::kable(result.4b, booktabs=T, 'latex') %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) %>% #hold table in place 
+  kableExtra::add_header_above(c(" "=1, "Integration"=1, "IS - Uniform"=3, "IS - Beta"=3)) #need to have a space in empty columns 
+```
+
+
+
+The standard error is pretty high and the estimates differ by about 0.003.
+```{r Mena}
+u<-runif(10000,0.7,0.9)
+I<-1/(0.9-0.7)
+su<-sum(u)
+j<-sum((1/u*u*(1-u)^4)/su)
+j 
+sd<-sqrt(sum(1/5*(u-j)^2))
+sd
+k<-function(x){
+  x*(1-x)^4
+}
+integrate(k, lower=0.7,upper=0.9)
+```
+
+$\text{\textcolor{red}{4B:OUTSTANDING}}$ 
+
 ## Problem 6a  
 Under the likelihood $\theta^k (1 - \theta)^{n-x}$ and the Beta$(a, b)$ prior ($a$ and $b$ known) compute the exact posterior mean.  Repeat the calculation using the second-order Laplace approximation.  evaluate the relative error for the data $n=5, \ x = 3$ and the prior values $a = b = \nicefrac{1}{2}$.  What is the relative error when $n = 25, \ x = 15$ (same prior)?  
+
+$\text{\textcolor{red}{6A:OUTSTANDING}}$ 
 
 ## Problem 1  
 Recall the genetic linkage model of Section 4.1.  
 
 ### Problem 1a  
 For the data $Y = (125, 18, 202, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge for all of these starting values? How do you access convergence?  How many iterations were required for convergence? 
+$\text{\textcolor{red}{1A:OUTSTANDING}}$ 
 
 ### Problem 1c  
 Plot the normal approximation along with the normalized likelihood.  Is the normal approximation appropriate in this case?  
+$\text{\textcolor{red}{1C:OUTSTANDING}}$ 
 
 ### Problem 1d  
 Repeat (a) and (c) for the data $Y = (14, 0, 1, 5)$.  did the algorithm coverage for all of the above starting values?  
+$\text{\textcolor{red}{1D:OUTSTANDING}}$ 
 
 ## Problem 2  
 Repeat Problem 1 (a) and (d) using the Monte Carlo *EM*.  How did you assess convergence.  
-
+$\text{\textcolor{red}{2A:OUTSTANDING}}$   
+$\text{\textcolor{red}{2D:OUTSTANDING}}$ 
 
