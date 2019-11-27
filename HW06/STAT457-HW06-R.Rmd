@@ -274,7 +274,6 @@ Solve the following problem posted by the Reverend Thomas Bayes in his essay "Es
 *Given* the number of times in which an unknown event has happened and failed: *Required* the chance that the probability of its happening in a single trial lies somewhere between any tow degrees of probability that can be named.  
 In other words, if the number of the successful happenings of the event is $p$ and the failures $q$, and if the named "degrees" of the probability are $b$ and $f$, respectively, compute: $\int_{b}^f x^p (1 - x)^q dx / \int_{0}^1 x^p (1 - x)^q dx$ via important sampling.  Take $p=1, \ q=4, \ b=0.7, \ f = 0.9$. 
 
-Let $J_1 = \int_{b}^f x^p (1 - x)^q dx$  
 
 ```{r p4a-functions}
 func_Like.Y <- function(x){ x^1 * (1 - x)^4 }
@@ -294,11 +293,12 @@ plot
 }
 ```
 
-```{r p4a-Uniform, warning=FALSE, message=FALSE}
+```{r p4a-Uniform, warning=FALSE, message=FALSE, fig.height=3}
 func_J.Uniform <- function(it, b, f){
-x1 <- runif(it, b, f)
-J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
-return(c(J1))
+x <- runif(it, b, f)
+w <- x / dunif(x, b, f)
+J <- sum((w * func_Like.Y(x))/sum(w))
+return(c(J))
 }
 
 func_w.star.Uniform <- function(it, b, f){
@@ -321,24 +321,25 @@ b <- 0.7
 f <- 0.9
 it.vec <- c(1e04, 1e05, 1e06)
 set.seed(0604011)
-IS.Uniform.J1 <- mapply(func_J.Uniform, it.vec, b, f)
+IS.Uniform.J <- mapply(func_J.Uniform, it.vec, b, f)
 
 Uniform.df <- func_big.df.Uniform(it.vec, b, f)
 Uniform.text.df <- data.frame(label =c(
-                paste("J1=", round(IS.Uniform.J1[1], 10)),
-                paste("J1=", round(IS.Uniform.J1[2], 10)),
-                paste("J1=", round(IS.Uniform.J1[3], 10))
+                paste("J=", round(IS.Uniform.J[1], 10)),
+                paste("J=", round(IS.Uniform.J[2], 10)),
+                paste("J=", round(IS.Uniform.J[3], 10))
                 ),
                        Iteration = it.vec)
 func_plots(Uniform.df, Uniform.text.df, "Uniform")
 
 ```
 
-```{r p4a-Beta, warning=FALSE, message=FALSE}
+```{r p4a-Beta, warning=FALSE, message=FALSE, fig.height=3}
 func_J.Beta <- function(it, b, f){
-x1 <- rbeta(it, b+1, f+1)
-J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
-return(c(J1))
+x <- rbeta(it, b+1, f+1)
+w <- x / dbeta(x, b+1, f+1)
+J <- sum((w * func_Like.Y(x))/sum(w))
+return(c(J))
 }
 
 func_w.star.Beta <- function(it, b, f){
@@ -361,27 +362,28 @@ b <- 0.7
 f <- 0.9
 it.vec <- c(1e04, 1e05, 1e06)
 set.seed(0604012)
-IS.Beta.J1 <- mapply(func_J.Beta, it.vec, b, f)
+IS.Beta.J <- mapply(func_J.Beta, it.vec, b, f)
 
 Beta.df <- func_big.df.Beta(it.vec, b, f)
 Beta.text.df <- data.frame(label =c(
-                paste("J1=", round(IS.Beta.J1[1], 10)),
-                paste("J1=", round(IS.Beta.J1[2], 10)),
-                paste("J1=", round(IS.Beta.J1[3], 10))
+                paste("J1=", round(IS.Beta.J[1], 10)),
+                paste("J1=", round(IS.Beta.J[2], 10)),
+                paste("J1=", round(IS.Beta.J[3], 10))
                 ),
                        Iteration = it.vec)
 func_plots(Beta.df, Beta.text.df, "Beta")
 ```
 
-```{r p4a-Normal, warning=FALSE, message=FALSE}
+```{r p4a-Normal, warning=FALSE, message=FALSE, fig.height=3}
 func_J.Normal <- function(it, b, f){
 alpha <- b + 1 
 beta <- f + 1
 mean <- alpha / (alpha + beta)
 var <- (alpha*beta) / ( (alpha + beta)^2 * (alpha + beta + 1) )
-x1 <- rnorm(it, mean, sqrt(var))
-J1 <- sum((func_Like.Y(x1) / x1)/sum(x1))
-return(c(J1))
+x <- rnorm(it, mean, sqrt(var))
+w <- x / dnorm(x, mean, sqrt(var))
+J <- sum((w * func_Like.Y(x))/sum(w))
+return(c(J))
 }
 
 func_w.star.Normal <- function(it, b, f){
@@ -408,59 +410,42 @@ b <- 0.7
 f <- 0.9
 it.vec <- c(1e04, 1e05, 1e06)
 set.seed(0604012)
-IS.Normal.J1 <- mapply(func_J.Normal, it.vec, b, f)
+IS.Normal.J <- mapply(func_J.Normal, it.vec, b, f)
 
 Normal.df <- func_big.df.Normal(it.vec, b, f)
-Beta.text.df <- data.frame(label =c(
-                paste("J1=", round(IS.Normal.J1[1], 10)),
-                paste("J1=", round(IS.Normal.J1[2], 10)),
-                paste("J1=", round(IS.Normal.J1[3], 10))
+Normal.text.df <- data.frame(label =c(
+                paste("J1=", round(IS.Normal.J[1], 10)),
+                paste("J1=", round(IS.Normal.J[2], 10)),
+                paste("J1=", round(IS.Normal.J[3], 10))
                 ),
                        Iteration = it.vec)
-func_plots(Beta.df, Beta.text.df, "Normal")
+func_plots(Normal.df, Normal.text.df, "Normal")
 ```
 
-$\text{\textcolor{red}{4A:OUTSTANDING}}$ 
 
+\newpage  
 ### Problem 4b  
 Repeat the calculation using numerical integration.  Compare the results of (a) and (b).  
 
 ```{r p4b}
-Integrate.J1 <- integrate(func_Like.Y, lower=b, upper=f)$value
+Integrate.J <- integrate(func_Like.Y, lower=b, upper=f)$value / integrate(func_Like.Y, lower=0, upper=1)$value
 
-iteration <- c("N/A", it.vec)
-J1.vec <- c(Integrate.J1, IS.Uniform.J1, IS.Beta.J1)
-Integrate.J1.vec <- rep(Integrate.J1, length(J1.vec))
-diff.J1 <- J1.vec - Integrate.J1.vec
+iteration <- c("N/A", it.vec, it.vec, it.vec)
+J.vec <- c(Integrate.J, IS.Uniform.J, IS.Beta.J, IS.Normal.J)
+Integrate.J.vec <- rep(Integrate.J, length(J.vec))
+diff.J <- J.vec - Integrate.J.vec
 
-result.4b <- rbind(iteration, round(J1.vec, 6), round(diff.J1, 6))
-rownames(result.4b) <- c("It", "J1", "J1-Intg")
-result.4b
+result.4b <- rbind(iteration, round(J.vec, 5), round(diff.J, 5))
+rownames(result.4b) <- c("It", "J", "J1-Intg")
 ```
 ```{r p4b-table}
 knitr::kable(result.4b, booktabs=T, 'latex') %>%
   kableExtra::kable_styling(latex_options="hold_position" ) %>% #hold table in place 
-  kableExtra::add_header_above(c(" "=1, "Integration"=1, "IS - Uniform"=3, "IS - Beta"=3)) #need to have a space in empty columns 
+  kableExtra::add_header_above(c(" "=1, "Integration"=1, "IS - Uniform"=3, "IS - Beta"=3, "IS- Normal"=3)) #need to have a space in empty columns 
 ```
 
 
 
-The standard error is pretty high and the estimates differ by about 0.003.
-```{r Mena}
-u<-runif(10000,0.7,0.9)
-I<-1/(0.9-0.7)
-su<-sum(u)
-j<-sum((1/u*u*(1-u)^4)/su)
-j 
-sd<-sqrt(sum(1/5*(u-j)^2))
-sd
-k<-function(x){
-  x*(1-x)^4
-}
-integrate(k, lower=0.7,upper=0.9)
-```
-
-$\text{\textcolor{red}{4B:OUTSTANDING}}$ 
 
 ## Problem 6a  
 Under the likelihood $\theta^k (1 - \theta)^{n-x}$ and the Beta$(a, b)$ prior ($a$ and $b$ known) compute the exact posterior mean.  Repeat the calculation using the second-order Laplace approximation.  evaluate the relative error for the data $n=5, \ x = 3$ and the prior values $a = b = \nicefrac{1}{2}$.  What is the relative error when $n = 25, \ x = 15$ (same prior)?  
