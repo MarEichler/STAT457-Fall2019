@@ -32,7 +32,7 @@ library(gtable) #for tablegrob functions
 library(dplyr) #for piping 
 library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(echo=FALSE, fig.width = 10, fig.height = 4)
-#knitr::opts_chunk$set(eval=FALSE)
+knitr::opts_chunk$set(eval=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
@@ -591,11 +591,44 @@ table6a <- as.data.frame(table6a)
 knitr::kable(table6a, 'markdown', align='rrr')
 ```
 
+\newpage  
 ## Problem 1  
 Recall the genetic linkage model of Section 4.1.  
 
 ### Problem 1a  
-For the data $Y = (125, 18, 202, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge for all of these starting values? How do you access convergence?  How many iterations were required for convergence? 
+For the data $Y = (125, 18, 20, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge for all of these starting values? How do you access convergence?  How many iterations were required for convergence?  
+```{r p1a}
+Y1 <- c(125, 18, 20, 34)
+mle1 <- 0.62682
+se1 <- 0.05382
+```
+
+```{r}
+conv<-function(t,m, mle, Y){
+theta<-t
+it<- rep(NA, 20)
+it[1]<-theta
+p<-mle/(2+mle)
+z<-rbinom(m,Y[1],p)
+l<-(mean(z)+Y[4])*log(theta)+(Y[2] + Y[3])*log(1-theta)
+theta<-(mean(z)+Y[4])/(mean(z)+Y[2]+Y[3]+Y[4])
+it[2]<-theta
+z<-rbinom(m,Y[1],p)
+l<-(mean(z)+Y[4])*log(theta)+(Y[2]+Y[3])*log(1-theta)
+k<-2
+while(abs(it[k]-it[k-1]) >= 0.0000001) {
+  theta<-(mean(z)+Y[4])/(mean(z)+Y[2]+Y[3]+Y[4])
+  k<-k+1
+  it[k]<-theta
+  z<-rbinom(m,Y[1],p)
+  l<-(mean(z)+Y[4])*log(theta)+(Y[2]+Y[3])*log(1-theta)
+}
+it<-it[!is.na(it)]
+it
+}
+```
+
+
 $\text{\textcolor{red}{1A:OUTSTANDING}}$ 
 
 ### Problem 1c  
@@ -608,6 +641,11 @@ $\text{\textcolor{red}{1D:OUTSTANDING}}$
 
 ## Problem 2  
 Repeat Problem 1 (a) and (d) using the Monte Carlo *EM*.  How did you assess convergence.  
+```{r p2a}
+theta.2 <- 0.903344
+se.2 <- 0.09348
+```
+
 $\text{\textcolor{red}{2A:OUTSTANDING}}$   
 $\text{\textcolor{red}{2D:OUTSTANDING}}$ 
 
