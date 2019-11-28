@@ -444,13 +444,152 @@ knitr::kable(result.4b, booktabs=T, 'latex') %>%
   kableExtra::add_header_above(c(" "=1, "Integration"=1, "IS - Uniform"=3, "IS - Beta"=3, "IS- Normal"=3)) #need to have a space in empty columns 
 ```
 
-
-
-
 ## Problem 6a  
 Under the likelihood $\theta^k (1 - \theta)^{n-x}$ and the Beta$(a, b)$ prior ($a$ and $b$ known) compute the exact posterior mean.  Repeat the calculation using the second-order Laplace approximation.  evaluate the relative error for the data $n=5, \ x = 3$ and the prior values $a = b = \nicefrac{1}{2}$.  What is the relative error when $n = 25, \ x = 15$ (same prior)?  
 
-$\text{\textcolor{red}{6A:OUTSTANDING}}$ 
+$$
+\begin{aligned}
+	&\underline{\textbf{Exact}} \\
+	p_E(\theta \mid Y) & \propto \text{Beta}(x + a, \ n - x + b)  \quad \implies \quad 
+	\mu_{E} = \frac{ x + a}{ a + b + n} 
+	\\[2ex]
+	&\underline{\textbf{2nd Laplace Approx}}
+	\\
+	\mu_{L} & = \frac{ \sigma^*}{\sigma^\dagger} \cdot \frac{ \exp \left\{ - nh^*(\theta^*) \right\} }
+	{ \exp \left\{ - nh^\dagger(\theta^\dagger) \right\} }
+	\\[2ex]
+	-nh^\dagger(\theta) & = \ell(\theta \mid Y) + \ln(p(\theta) )
+	\\
+	& \quad  \quad \arraycolsep=1pt \def\arraystretch{1.4}   \begin{array}{r c l}
+		\ell(\theta \mid Y) & =& x \ln(\theta) + (n - x) \ln(\theta) \\
+		\ln(p(\theta)) & =& (a - 1) \ln(\theta) + (b-1)\ln(1 - \theta) 
+	\end{array} 
+	\\
+	&= \alpha_\dagger  \ln(\theta) + \beta_\dagger  \ln(1 - \theta) 
+	\quad \quad \arraycolsep=1pt \def\arraystretch{1.4}  \begin{array}{r c l}
+	\alpha_\dagger &=& x + a -1 \\
+	\beta_\dagger &=& n - x + b - 1 
+	\end{array} 
+	\\[2ex]
+		-nh^*(\theta) & = \ell(\theta \mid Y) + \ln(p(\theta) ) + ln(g(\theta))
+	\\
+	& \quad  \quad \begin{array}{r c l}
+	\ell(\theta \mid Y) & =& x \ln(\theta) + (n - x) \ln(\theta) \\
+	\ln(p(\theta)) & =& (a - 1) \ln(\theta) + (b-1)\ln(1 - \theta) \\
+	ln(g(\theta)) &=& \ln(\theta) 
+	\end{array} 
+	\\
+	&= \alpha_* \ln(\theta) + \beta_* \ln(1 - \theta) 
+	\quad \quad \arraycolsep=1pt \def\arraystretch{1.4}  \begin{array}{r c l}
+	\alpha_* &=& x + a  \\
+	\beta_* &=& n - x + b - 1 
+	\end{array} 
+	\\[2ex]
+	\theta^{(\cdot)} &  = 
+	\arg\max_\theta (- nh^{(\cdot)}(\theta)) = 
+		\frac{ \partial - n h^{(\cdot)}(\theta) }{\partial \theta} =  \frac{\alpha_{(\cdot)}}{\theta} - \frac{\beta_{(\cdot)}}{1 - \theta} \stackrel{\text{set}}{=} 0 
+		\implies 
+		\theta^{(\cdot)} = 
+	 \frac{ \alpha_{(\cdot)} }{ \alpha_{(\cdot)} + \beta_{(\cdot)} }  
+	\\[1ex]
+	\sigma^{(\cdot)} & = \left[ \frac{ \partial^2 h^{(\cdot)}(\theta)}{\partial \theta^2} \Big|_{\theta^{(\cdot)}} \right]^{-1/2}
+	= \left[ \frac{1}{n} \left(  \frac{ \alpha_{(\cdot)}}{ (\theta^{(\cdot)})^2 } + \frac{\beta_{(\cdot)}}{(1 - \theta^{(\cdot)})^2}\right) \right]^{-1/2} 
+\end{aligned} 
+$$
+
+```{r p6a-function}
+func_theta.dot <- function(alpha, beta){
+  alpha / (alpha + beta)}
+
+func_sigma.dot <- function(alpha, beta, theta, n){
+  sqrt( ( (1/n) *(
+                 (alpha / theta^2) + (beta / ((1 - theta)^2))
+                )
+        )
+  )
+}
+
+func_nh.dot<- function(alpha, beta, theta){
+  theta^alpha * (1 - theta)^beta 
+}
+
+
+func_mu.Laplace <- function(n, x, a, b){ 
+alpha.dagger <- x + a - 1
+beta.dagger <- n - x + b - 1 
+alpha.star <- x + a 
+beta.star <- n - x + b - 1 
+
+theta.dagger <- func_theta.dot(alpha.dagger, beta.dagger)
+theta.star   <- func_theta.dot(alpha.star,   beta.star)
+sigma.dagger <- func_sigma.dot(alpha.dagger, beta.dagger, theta.dagger, n)
+sigma.star   <- func_sigma.dot(alpha.star,   beta.star,   theta.star,   n)
+
+mu.Laplace <- (sigma.star/sigma.dagger)*(func_nh.dot(alpha.star, beta.star, theta.star)/func_nh.dot(alpha.dagger, beta.dagger, theta.dagger))
+return(mu.Laplace)
+}
+
+
+func_mu.Exact <- function(n, x, a, b){
+  mu.Exact <- (x + a) / (a + b +n)
+  return(mu.Exact)
+}
+
+func_rel.error <- function(n, x, a, b){
+  mu.Exact <- func_mu.Exact(n, x, a, b)
+  mu.Laplace <- func_mu.Laplace(n, x, a, b)
+  error <- mu.Laplace - mu.Exact
+  relative.error <- error / mu.Exact 
+  return(relative.error)
+}
+```
+
+
+```{r 6a-data1}
+n1 <- 5
+x1 <- 3
+a1 <- 1/2
+b1 <- 1/2 
+
+mu.Laplace1 <- func_mu.Laplace(n1, x1, a1, b1)
+mu.Exact1 <- func_mu.Exact(n1, x1, a1, b1)
+rel.error1 <- func_rel.error(n1, x1, a1, b1)
+```
+
+```{r 6a-data2}
+n2 <- 25
+x2 <- 15
+a2 <- 1/2
+b2 <- 1/2 
+
+mu.Laplace2 <- func_mu.Laplace(n2, x2, a2, b2)
+mu.Exact2 <- func_mu.Exact(n2, x2, a2, b2)
+rel.error2 <- func_rel.error(n2, x2, a2, b2)
+```
+
+```{r 6a-table}
+one <- c( decimal(n1,0)
+         ,round(x1,0)
+         ,round(a1,1)
+         ,round(b1,1)
+         ,round(mu.Exact1,dec)
+         ,round(mu.Laplace1,dec)
+         ,round(rel.error1, dec)
+        ) 
+two <- c( decimal(n2,0)
+         ,round(x2,0)
+         ,round(a2,1)
+         ,round(b2,1)
+         ,round(mu.Exact2,dec)
+         ,round(mu.Laplace2,dec)
+         ,round(rel.error2, dec)
+        ) 
+table6a <- cbind(one, two)
+rownames(table6a) <- c("Data.n", "Data.x", "Prior.a", "Prior.b", "Exact.mean", "Laplace.Mean", "Relative.Error")
+colnames(table6a) <- c("Part.1", "Part.2")
+table6a <- as.data.frame(table6a)
+knitr::kable(table6a, 'markdown', align='rrr')
+```
 
 ## Problem 1  
 Recall the genetic linkage model of Section 4.1.  
