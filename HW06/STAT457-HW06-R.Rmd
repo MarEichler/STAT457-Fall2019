@@ -28,11 +28,10 @@ library(latex2exp) #latex in ggplot titles
 library(matlib) #A = matrix, inv(A) = A^{-1} 
 library(numDeriv) #calculate numerical first and second order derivatives 
 library(gtable) #for tablegrob functions 
-#library(kableExtra) #for kable functions
 library(dplyr) #for piping 
 library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(echo=FALSE, fig.width = 10, fig.height = 4)
-knitr::opts_chunk$set(eval=FALSE)
+#knitr::opts_chunk$set(eval=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
@@ -597,47 +596,164 @@ Recall the genetic linkage model of Section 4.1.
 
 ### Problem 1a  
 For the data $Y = (125, 18, 20, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge for all of these starting values? How do you access convergence?  How many iterations were required for convergence?  
-```{r p1a}
+
+$$
+\begin{aligned}
+\text{Given } Y & = (y_1, y_2, y_3, y_4) \text{ with probabilities } \left( \frac{ \theta + 2}{4}, \frac{ 1 - \theta}{4},  \frac{ 1 - \theta}{4}, \frac{ \theta}{4} \right) \\
+\text{Say } Y & = (x, z, y_2, y_3, y_4) \text{ with probabilities } \left( \frac{1}{2}, \frac{ \theta}{4}, \frac{ 1 - \theta}{4},  \frac{ 1 - \theta}{4}, \frac{ \theta}{4} \right) 
+\\[2ex]
+p(Z \mid Y, \theta) & \sim \text{Binomial}\left(x + z, \  \frac{p(z)}{p(x) + p(z)} \right) = \text{Binomial} \left(y_1, \ \frac{ \theta / 4}{(\theta + 2)/4}  \right) = \text{Binomial} \left( y_1, \ \frac{ \theta}{2 + \theta} \right)
+\\[2ex]
+p(\theta \mid Y, Z) &\sim
+\left( \frac{1}{2} \right) ^{x}
+\left( \frac{\theta}{4} \right)^{z} 
+\left( \frac{1 - \theta}{4} \right)^{y_2 + y_3}
+\left( \frac{\theta}{4} \right)^{y_4}
+\propto \theta^{z + x_5} (1 - \theta)^{y_2 + y_3}
+\\[2ex]
+&\underline{\textbf{E Step}: \text{to get Q function}}
+\\
+Q(\theta, \theta^i) & = \mathbb{E}_{Z \mid \theta^i} \left[ \log \left( p(\theta \mid Y, Z) \right) \right] 
+= \mathbb{E}_{Z \mid \theta^i} \Big[ (z + y_4)\log(\theta) + (y_2 + y_3) \log(1 - \theta) \mid \theta^i, Y \Big]
+\\
+& = (y_2 + y_3) \log(1 - \theta) + \left( \mathbb{E}_{Z \mid \theta^i} \left[ Z \mid \theta^i, Y \right] + y_4 \right) \log(\theta)
+\\
+& \quad \quad \quad \quad p(Z \mid Y, \theta^i) \sim \text{Binomial}(y_1, \theta/(\theta+2)) \implies 
+\mathbb{E}_{Z \mid \theta^i} \left[ Z \mid \theta^i, Y \right] = \frac{y_1 \theta^i}{\theta^i + 2}
+\\
+& = (y_2 + y_3) \log(1 - \theta) + \left( \frac{y_1 \theta^i}{\theta^i + 2}+ y_4 \right) \log(\theta)
+\\[1ex]
+&\underline{\textbf{M Step}: \textstyle\arg\max_\theta Q(\theta, \theta^i)}
+\\
+\frac{ \partial Q(\theta, \theta^i)}{\partial \theta} & = - \frac{y_2 + y_3}{1 - \theta} + \frac{ \mathbb{E}Z}{\theta} \stackrel{\text{set}}{=} 0 
+\quad \quad \implies \theta^{i+1} = \frac{ \mathbb{E}Z + y_4}{\mathbb{E}Z + y_2 + y_3 + y_4}
+\\[0.5ex]
+\theta^{i+1} & = \frac{ \frac{y_1 \theta^i}{\theta^i + 2} + y_4}{\frac{y_1 \theta^i}{\theta^i + 2} + y_2 + y_3 + y_4}
+\end{aligned} 
+$$
+
+```{r p1EM-function, eval=TRUE}
+func_EM <- function(start, max.iteration, mle, Y){
+  theta_i <- start
+  chain <- rep(NA, max.iteration)
+  chain[1] <- theta_i  
+  EZ_i <- (Y[1]*theta_i)/(theta_i+2)
+  theta_i <- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+  chain[2] <- theta_i 
+  for (j in 3:max.iteration){
+    EZ_i <- (Y[1]*theta_i)/(theta_i+2)
+    theta_i <- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+    chain[j] <- theta_i 
+    if (abs(chain[j]- chain[j-1]) <= 1e-07){ 
+      estimate <- decimal(chain[j], 10)
+      break  }
+    else (estimate <- "DID NOT CONVERGE")
+    }
+  it.used <- length(chain[!is.na(chain)])
+  result <- c(start, estimate, it.used)
+  return(result)
+}
+```
+
+
+```{r p1a, eval=TRUE}
 Y1 <- c(125, 18, 20, 34)
 mle1 <- 0.62682
 se1 <- 0.05382
+print.Y1 <- paste(Y1, collapse=",")
+
+start.1 <- func_EM(0.1, 100, mle1, Y1)
+start.2 <- func_EM(0.2, 100, mle1, Y1)
+start.3 <- func_EM(0.3, 100, mle1, Y1)
+start.4 <- func_EM(0.4, 100, mle1, Y1)
+start.6 <- func_EM(0.6, 100, mle1, Y1)
+start.8 <- func_EM(0.8, 100, mle1, Y1)
+
+table1a <- cbind(start.1, start.2, start.3, start.4, start.6, start.8)
+rownames(table1a) <- c("Start Value", "Estimation", "Iterations Used")
+colnames(table1a) <- c(rep("", 6))
+knitr::kable(table1a, align='rrrrrr', caption=paste("EM for Y=(", print.Y1, ")"), booktabs=T, 'latex') %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
 ```
 
-```{r}
-conv<-function(t,m, mle, Y){
-theta<-t
-it<- rep(NA, 20)
-it[1]<-theta
-p<-mle/(2+mle)
-z<-rbinom(m,Y[1],p)
-l<-(mean(z)+Y[4])*log(theta)+(Y[2] + Y[3])*log(1-theta)
-theta<-(mean(z)+Y[4])/(mean(z)+Y[2]+Y[3]+Y[4])
-it[2]<-theta
-z<-rbinom(m,Y[1],p)
-l<-(mean(z)+Y[4])*log(theta)+(Y[2]+Y[3])*log(1-theta)
-k<-2
-while(abs(it[k]-it[k-1]) >= 0.0000001) {
-  theta<-(mean(z)+Y[4])/(mean(z)+Y[2]+Y[3]+Y[4])
-  k<-k+1
-  it[k]<-theta
-  z<-rbinom(m,Y[1],p)
-  l<-(mean(z)+Y[4])*log(theta)+(Y[2]+Y[3])*log(1-theta)
-}
-it<-it[!is.na(it)]
-it
-}
-```
+Convergence is determined if the the values within the chain have an absolute difference less than 1e-07.  
 
 
-$\text{\textcolor{red}{1A:OUTSTANDING}}$ 
+\newpage  
 
 ### Problem 1c  
 Plot the normal approximation along with the normalized likelihood.  Is the normal approximation appropriate in this case?  
-$\text{\textcolor{red}{1C:OUTSTANDING}}$ 
+
+
+```{r p1c-graph}
+func_scalelike<-function(x,y1,y2,y3,y4){
+  like <-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
+  like.max<-max(like)
+  like/like.max #normalized likelihood (on scale from 0 to 1) 
+}
+
+func_scalenormal<-function(x, mean, sd){
+  scales::rescale(dnorm(x, mean, sd), to=c(0, 1)) #normal (on scale from 0 to 1) 
+}
+
+func_plots <- function(yval, mle, se){
+colors <- c("navy", "maroon")
+norm.like <-    stat_function(fun = func_scalelike, args = list(y1=yval[1], y2=yval[2], y3=yval[3], y4=yval[4]), lwd = 1.5, linetype="solid", aes(col="Normalized Likelihood"))
+normal.approx <-stat_function(fun = func_scalenormal, args = list(mean=mle, sd=se), lwd = 2.5, linetype="dotted", aes(col="Normal Approximation"))
+
+print.yval <- paste(yval, collapse=", ")
+name <- paste("Normal Likelihood and Normal Approximation for Y=(", print.yval, ")")
+
+
+x <- seq(0, 1, 0.001)
+df <- data.frame("X"=x)
+ggplot(data=df, aes(x=X))+
+  norm.like+normal.approx+
+  ggtitle(paste(name))+
+  theme(axis.title.x = element_blank())+
+  scale_colour_manual("", values = c(colors[1], colors[2])) 
+  #theme(legend.position = "bottom")+
+
+}
+```
+
+
+```{r p1c, warning=FALSE}
+func_plots(Y1, mle1, se1)
+```
+The Normal Approximation is appropirate in this case.  
 
 ### Problem 1d  
 Repeat (a) and (c) for the data $Y = (14, 0, 1, 5)$.  did the algorithm coverage for all of the above starting values?  
-$\text{\textcolor{red}{1D:OUTSTANDING}}$ 
+
+
+```{r p1d_a}
+Y2 <- c(14, 0, 1, 5)
+mle2 <- 0.903344
+se2 <- 0.09348
+print.Y2 <- paste(Y2, collapse=",")
+
+start.1 <- func_EM(0.1, 100, mle2, Y2)
+start.2 <- func_EM(0.2, 100, mle2, Y2)
+start.3 <- func_EM(0.3, 100, mle2, Y2)
+start.4 <- func_EM(0.4, 100, mle2, Y2)
+start.6 <- func_EM(0.6, 100, mle2, Y2)
+start.8 <- func_EM(0.8, 100, mle2, Y2)
+
+table1d_a <- cbind(start.1, start.2, start.3, start.4, start.6, start.8)
+rownames(table1d_a) <- c("Start Value", "Estimation", "Iterations Used")
+colnames(table1d_a) <- c(rep("", 6))
+
+knitr::kable(table1d_a, align='rrrrrr', caption=paste("EM for Y=(", print.Y2, ")"), booktabs=T, 'latex') %>%
+  kableExtra::kable_styling(latex_options="hold_position" )
+```
+
+
+```{r p1d_c, warning=FALSE}
+func_plots(Y2, mle2, se2)
+```
+The Normal Approximation is not appropriate in this case.  
+
 
 ## Problem 2  
 Repeat Problem 1 (a) and (d) using the Monte Carlo *EM*.  How did you assess convergence.  
