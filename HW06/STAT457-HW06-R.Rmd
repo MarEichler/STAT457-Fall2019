@@ -633,7 +633,7 @@ Q(\theta, \theta^i) & = \mathbb{E}_{Z \mid \theta^i} \left[ \log \left( p(\theta
 $$
 
 ```{r p1EM-function, eval=TRUE}
-func_EM <- function(start, max.iteration, mle, Y){
+func_EM <- function(start, max.iteration, Y){
   theta_i <- start
   chain <- rep(NA, max.iteration)
   chain[1] <- theta_i  
@@ -662,12 +662,12 @@ mle1 <- 0.62682
 se1 <- 0.05382
 print.Y1 <- paste(Y1, collapse=",")
 
-start.1 <- func_EM(0.1, 100, mle1, Y1)
-start.2 <- func_EM(0.2, 100, mle1, Y1)
-start.3 <- func_EM(0.3, 100, mle1, Y1)
-start.4 <- func_EM(0.4, 100, mle1, Y1)
-start.6 <- func_EM(0.6, 100, mle1, Y1)
-start.8 <- func_EM(0.8, 100, mle1, Y1)
+start.1 <- func_EM(0.1, 100, Y1)
+start.2 <- func_EM(0.2, 100, Y1)
+start.3 <- func_EM(0.3, 100, Y1)
+start.4 <- func_EM(0.4, 100, Y1)
+start.6 <- func_EM(0.6, 100, Y1)
+start.8 <- func_EM(0.8, 100, Y1)
 
 table1a <- cbind(start.1, start.2, start.3, start.4, start.6, start.8)
 rownames(table1a) <- c("Start Value", "Estimation", "Iterations Used")
@@ -733,12 +733,12 @@ mle2 <- 0.903344
 se2 <- 0.09348
 print.Y2 <- paste(Y2, collapse=",")
 
-start.1 <- func_EM(0.1, 100, mle2, Y2)
-start.2 <- func_EM(0.2, 100, mle2, Y2)
-start.3 <- func_EM(0.3, 100, mle2, Y2)
-start.4 <- func_EM(0.4, 100, mle2, Y2)
-start.6 <- func_EM(0.6, 100, mle2, Y2)
-start.8 <- func_EM(0.8, 100, mle2, Y2)
+start.1 <- func_EM(0.1, 100, Y2)
+start.2 <- func_EM(0.2, 100, Y2)
+start.3 <- func_EM(0.3, 100, Y2)
+start.4 <- func_EM(0.4, 100, Y2)
+start.6 <- func_EM(0.6, 100, Y2)
+start.8 <- func_EM(0.8, 100, Y2)
 
 table1d_a <- cbind(start.1, start.2, start.3, start.4, start.6, start.8)
 rownames(table1d_a) <- c("Start Value", "Estimation", "Iterations Used")
@@ -757,11 +757,67 @@ The Normal Approximation is not appropriate in this case.
 
 ## Problem 2  
 Repeat Problem 1 (a) and (d) using the Monte Carlo *EM*.  How did you assess convergence.  
-```{r p2a}
-theta.2 <- 0.903344
-se.2 <- 0.09348
+```{r p2a-MCEM}
+func_MCEM <- function(start, max.iteration, Y, m){
+  theta_i <- start
+  chain <- rep(NA, max.iteration)
+  chain[1] <- theta_i  
+  p.z <- theta_i / (theta_i +2)
+  EZ_i <- mean(rbinom(m, Y[1], p.z))
+  theta_i <- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+  chain[2] <- theta_i 
+  for (j in 3:max.iteration){
+    p.z <- theta_i / (theta_i +2)
+    EZ_i <- mean(rbinom(m, Y[1], p.z))
+    theta_i <- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+    chain[j] <- theta_i 
+    if (abs(chain[j]- chain[j-1]) <= 1e-07){ 
+      estimate <- decimal(chain[j], 10)
+      break  }
+    else (estimate <- "DID NOT CONVERGE")
+    }
+  it.used <- length(chain[!is.na(chain)])
+  result <- c(start, estimate, it.used)
+  return(result)
+}
+
+func_MCMC.m <- function(start.vec, max.iteration, Y, m){
+
+start.1 <- func_MCEM(start.vec[1], max.iteration, Y, m)
+start.2 <- func_MCEM(start.vec[2], max.iteration, Y, m)
+start.3 <- func_MCEM(start.vec[3], max.iteration, Y, m)
+start.4 <- func_MCEM(start.vec[4], max.iteration, Y, m)
+start.6 <- func_MCEM(start.vec[5], max.iteration, Y, m)
+start.8 <- func_MCEM(start.vec[6], max.iteration, Y, m)
+
+table<- cbind(start.1, start.2, start.3, start.4, start.6, start.8)
+rownames(table) <- c("Start Value", "Estimation", "Iterations Used")
+colnames(table) <- c(rep("", 6))
+
+print.Y <- paste(Y, collapse=",")
+
+knitr::kable(table, align='rrrrrr', caption=paste("MCEM for Y=(", print.Y, "), m=",m), booktabs=T, 'latex') %>%
+   kableExtra::kable_styling(latex_options="hold_position" )
+}
 ```
 
-$\text{\textcolor{red}{2A:OUTSTANDING}}$   
-$\text{\textcolor{red}{2D:OUTSTANDING}}$ 
+```{r p2_1}
+Y1 <- c(125, 18, 20, 34)
+start.vec <- c(0.1, 0.2, 0.3, 0.4, 0.6, 0.8)
+
+func_MCMC.m(start.vec, 10000, Y1, 1e02)
+func_MCMC.m(start.vec, 10000, Y1, 1e03)
+func_MCMC.m(start.vec, 10000, Y1, 1e04)
+```
+
+```{r p2_2}
+Y2 <- c(14, 0, 1, 5)
+start.vec <- c(0.1, 0.2, 0.3, 0.4, 0.6, 0.8)
+
+func_MCMC.m(start.vec, 10000, Y2, 1e02)
+func_MCMC.m(start.vec, 10000, Y2, 1e03)
+func_MCMC.m(start.vec, 10000, Y2, 1e04)
+```
+
+
 
