@@ -821,3 +821,10 @@ func_MCMC.m(start.vec, 10000, Y2, 1e04)
 
 
 
+
+
+```{r}
+#PRINTING THE CODE
+#knitr::stitch("HW06.Rmd") to go to latex
+#knitr::stitch(   script="STAT457-HW06-R.Rmd"  , system.file("misc", "knitr-template.Rhtml", package="knitr")) #code to HTML
+```

@@ -1,0 +1,965 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.str {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.std {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+  <script src="https://yihui.name/media/js/center-images.js"></script>
+  <title>\title{}</title>
+</head>
+<body>
+
+  <p>This report is automatically generated with the R
+    package <a href="https://yihui.name/knitr/"><strong>knitr</strong></a>
+    (version <code class="knitr inline">1.24</code>)
+    .</p>
+
+<div class="chunk" id="auto-report"><div class="rcode"><div class="source"><pre class="knitr r">---
+title: STAT 457 Homework 05
+author: Martha Eichlersmith
+date: 2019-12-03
+output:
+  pdf_document:
+    fig_caption: yes
+header-includes:
+  - \usepackage{xcolor}
+  - \usepackage{mathtools}
+  - \usepackage{amsbsy} <span class="hl com">#bold <span class="hl kwa">in</span> mathmode</span>
+  - \usepackage{nicefrac} <span class="hl com"># <span class="hl kwa">for</span> nice fracs </span>
+  - \usepackage{booktabs}
+  - \usepackage{geometry}
+  - \usepackage{caption} <span class="hl com">#to remove automatic table name and number - \captionsetup[table]{labelformat=empty}, put code under ---</span>
+geometry: <span class="hl str">&quot;left=1.75cm,right=1.75cm,top=1.5cm,bottom=2cm&quot;</span> 
+
+---
+
+\captionsetup[table]{labelformat=empty} 
+```{r setup, echo=<span class="hl kwa">FALSE</span>, results=<span class="hl str">&quot;hide&quot;</span>, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>}
+<span class="hl kwd">rm</span>(list=<span class="hl kwd">ls</span>()) ### To clear namespace
+<span class="hl kwd">library</span>(ggplot2) #ggplot
+<span class="hl kwd">library</span>(readr) #import CSV
+<span class="hl kwd">library</span>(gridExtra) #organize plots
+<span class="hl kwd">library</span>(grid) #organize plots
+<span class="hl kwd">library</span>(latex2exp) #latex <span class="hl kwa">in</span> ggplot titles 
+<span class="hl kwd">library</span>(matlib) #A = matrix, <span class="hl kwd">inv</span>(A) = A^{-1} 
+<span class="hl kwd">library</span>(numDeriv) #calculate numerical first and second order derivatives 
+<span class="hl kwd">library</span>(gtable) #<span class="hl kwa">for</span> tablegrob functions 
+<span class="hl kwd">library</span>(dplyr) #<span class="hl kwa">for</span> piping 
+<span class="hl kwd">library</span>(MCMCpack) #<span class="hl kwa">for</span> dirichelt
+knitr::opts_chunk$<span class="hl kwd">set</span>(echo=<span class="hl kwa">FALSE</span>, fig.width = 10, fig.height = 4)
+#knitr::opts_chunk$<span class="hl kwd">set</span>(eval=<span class="hl kwa">FALSE</span>)
+decimal &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x, k) <span class="hl kwd">trimws</span>(<span class="hl kwd">format</span>(<span class="hl kwd">round</span>(x, k), nsmall=k))
+dec &lt;- 5
+#knitr::opts_chunk$<span class="hl kwd">set</span>(echo=<span class="hl kwa">FALSE</span>) #using knitr <span class="hl kwa">for</span> this option but don't have to load 
+```
+
+
+\newpage  
+<span class="hl com">### Problem 3a  </span>
+For the genetic linkage model: use importance sampling to obtain the posterior mean <span class="hl kwa">for</span> data $Y = (125, 18, 20, 34)$.  Use the matching normal distribution as the importance <span class="hl kwa">function</span>.  Compare your importance sampling estimates of the posterior mean to those obtained via Laplace's method.  Draw the histogram of the weights and compute their standard deviation.  Normal Approxiamation <span class="hl kwa">for</span> $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.62682, \ \sigma=0.05382)$  
+
+```{r p3ab_function}
+func_Like.Y &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x, yvec){
+  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
+}
+
+
+func_ifoutside &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x){
+  y &lt;- 0
+  <span class="hl kwd"><span class="hl kwa">if</span></span> (x&gt;1 | x&lt;0) {y=0} 
+  <span class="hl kwa">else</span> {y=x}
+  <span class="hl kwd">return</span>(y)
+}
+
+
+func_g &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(w){
+  y &lt;- 0
+  <span class="hl kwd"><span class="hl kwa">if</span></span> (w==0) {y =0}
+  <span class="hl kwa">else</span> {y =<span class="hl kwd">func_Like.Y</span>(w, Y.vec)/w}
+  <span class="hl kwd">return</span>(y)
+}
+
+
+func_w.star &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, Y.vec, N.mu, N.sig){
+w &lt;- <span class="hl kwd">rnorm</span>(it, N.mu, N.sig)
+<span class="hl com">#randomly draw w_i's</span>
+w &lt;- <span class="hl kwd">sapply</span>(w, func_ifoutside)
+<span class="hl com">#<span class="hl kwa">for</span> if w not <span class="hl kwa">in</span> [0, 1]</span>
+g_w &lt;- <span class="hl kwd">sapply</span>(w, func_g)
+#<span class="hl kwa">function</span> <span class="hl kwd">g</span>(w_i)'s where <span class="hl kwd">g</span>(x) =  likelihood / w_i 
+w.star &lt;- g_w / <span class="hl kwd">sum</span>(g_w)
+#w.star = weights = <span class="hl kwd">g</span>(x)/<span class="hl kwd">sum</span>(<span class="hl kwd">g</span>(x))
+it.vec &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(it, it))
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w&quot;</span>=w, <span class="hl str">&quot;w.star&quot;</span>=w.star, <span class="hl str">&quot;it&quot;</span>=it.vec)
+<span class="hl kwd">return</span>(df)
+}
+
+func_compare &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(w, w.star, N.mu, N.sig){
+  it &lt;- <span class="hl kwd">length</span>(w)
+  post.mean &lt;- <span class="hl kwd">sum</span>(w.star*w)
+  post.sd &lt;- <span class="hl kwd">sqrt</span>(<span class="hl kwd">sum</span>(w.star*(w - post.mean)^2))
+  compare &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;IS&quot;</span>=<span class="hl kwd">c</span>(post.mean, post.sd), <span class="hl str">&quot;Norm Apprx&quot;</span> =<span class="hl kwd">c</span>(N.mu, N.sig), <span class="hl str">&quot;Diff&quot;</span>=<span class="hl kwd">c</span>(post.mean-N.mu, post.sd-N.sig))
+  <span class="hl kwd">rownames</span>(compare) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;mean&quot;</span>, <span class="hl str">&quot;sd&quot;</span>) 
+  <span class="hl kwd">return</span>(compare)
+}
+
+func_plotsAB &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it.vec, Y.vec, N.mu, N.sig){
+
+df1 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[1], Y.vec, N.mu, N.sig)
+df2 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[2], Y.vec, N.mu, N.sig)
+df3 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[3], Y.vec, N.mu, N.sig)
+
+compare1 &lt;- <span class="hl kwd">func_compare</span>(df1$w, df1$w.star, N.mu, N.sig)
+compare2 &lt;- <span class="hl kwd">func_compare</span>(df2$w, df2$w.star, N.mu, N.sig)
+compare3 &lt;- <span class="hl kwd">func_compare</span>(df3$w, df3$w.star, N.mu, N.sig)
+
+table1 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare1, dec))
+table2 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare2, dec))
+table3 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare3, dec))
+
+big.df &lt;- <span class="hl kwd">rbind</span>(df1, df2, df3)
+
+dat_text &lt;- <span class="hl kwd">data.frame</span>(label =<span class="hl kwd">c</span>(
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df1$w.star), 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df2$w.star), 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df3$w.star), 10))
+                ),
+                       Iteration = it.vec)
+
+df_w.star &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w.star&quot;</span>=big.df$w.star, <span class="hl str">&quot;Iteration&quot;</span>=big.df$it )
+print.Y.vec &lt;- <span class="hl kwd">paste</span>(Y.vec, collapse=<span class="hl str">&quot;,&quot;</span>)
+name &lt;- <span class="hl kwd">paste</span>(<span class="hl str">&quot;Important Sampling Weights <span class="hl kwa">for</span> Y=(&quot;</span>, print.Y.vec, <span class="hl str">&quot;)&quot;</span>)
+
+plot &lt;-  <span class="hl kwd">ggplot</span>(df_w.star, <span class="hl kwd">aes</span>(w.star))+<span class="hl kwd">geom_histogram</span>(<span class="hl kwd">aes</span>(y=..density..), color=<span class="hl str">&quot;black&quot;</span>, alpha=0.5)+
+   <span class="hl kwd">facet_wrap</span>(~Iteration, ncol=3)+
+  <span class="hl kwd">ggtitle</span>(<span class="hl kwd">paste</span>(name))+
+  <span class="hl kwd">theme</span>( axis.text.x=<span class="hl kwd">element_blank</span>()
+        ,axis.text.y=<span class="hl kwd">element_blank</span>()
+        )+
+  <span class="hl kwd">geom_text</span>(data=dat_text, mapping=<span class="hl kwd">aes</span>(x=<span class="hl kwa">Inf</span>, y = <span class="hl kwa">Inf</span>, label=label), hjust=1.5, vjust=2, size=4)+
+  <span class="hl kwd">xlab</span>(<span class="hl kwd">TeX</span>(<span class="hl str">&quot;$w^*$=weights&quot;</span>))
+
+gs &lt;- <span class="hl kwd">list</span>(plot, table1, table2, table3)
+<span class="hl kwd">grid.arrange</span>(grobs=gs, 
+              widths = <span class="hl kwd">c</span>(1, 1, 1), 
+              heights =2:1,
+              layout_matrix = <span class="hl kwd">rbind</span>( <span class="hl kwd">c</span>(1, 1, 1),
+                                     <span class="hl kwd">c</span>(2, 3, 4)
+ ))
+}
+```
+
+```{r p3a, fig.height=5, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>}
+<span class="hl kwd">set.seed</span>(060301)
+Y.vec &lt;- <span class="hl kwd">c</span>(125, 18, 20, 34)
+N.mu  &lt;- 0.62682
+N.sig &lt;- 0.05382
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+
+<span class="hl kwd">func_plotsAB</span>(it.vec, Y.vec, N.mu, N.sig)
+```
+
+<span class="hl com">### Problem 3b  </span>
+<span class="hl kwd">Repeat</span> (a) <span class="hl kwa">for</span> the data $Y = (14, 0, 1, 5)$.  Normal Approximation <span class="hl kwa">for</span> $Y = (125, 18, 20, 34) \sim \mathcal{N}(\mu = 0.90344, \ \sigma=0.09348)$
+
+```{r p3b, fig.height=5, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>}
+<span class="hl kwd">set.seed</span>(060302)
+Y.vec &lt;- <span class="hl kwd">c</span>(14,0,1,5)
+N.mu  &lt;- 0.90344
+N.sig &lt;- 0.09348
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+
+<span class="hl kwd">func_plotsAB</span>(it.vec, Y.vec, N.mu, N.sig)
+```
+Using a normal important sampling <span class="hl kwa">function</span> to estiamte the posterior mean is closer <span class="hl kwa">for</span> $Y=(125, 18, 20, 34)$ normal approximation than $Y=(14, 0, 1, 5)$.  This makes sense as <span class="hl kwa">in</span> the last homework, we showed the likelihood <span class="hl kwa">for</span> the first data follows the approximate normal distribution very closely whereas the second data likelihood did not follow the normal approximation well.  
+
+\newpage  
+<span class="hl com">### Problem 3c  </span>
+<span class="hl kwd">Repeat</span> (a) <span class="hl kwd">and</span> (b) with a Uniform[0, 1] importance <span class="hl kwa">function</span>.  
+
+```{r p3C_function}
+func_Like.Y &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x, yvec){
+  (x + 2)^(yvec[1]) * (1 - x)^(yvec[2]+yvec[3]) *  (x)^( yvec[4])
+}
+
+
+func_ifoutside &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x){
+  y &lt;- 0
+  <span class="hl kwd"><span class="hl kwa">if</span></span> (x&gt;1 | x&lt;0) {y=0} 
+  <span class="hl kwa">else</span> {y=x}
+  <span class="hl kwd">return</span>(y)
+}
+
+
+func_g &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(w){
+  y &lt;- 0
+  <span class="hl kwd"><span class="hl kwa">if</span></span> (w==0) {y =0}
+  <span class="hl kwa">else</span> {y =<span class="hl kwd">func_Like.Y</span>(w, Y.vec)/w}
+  <span class="hl kwd">return</span>(y)
+}
+
+
+func_w.star &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, Y.vec){
+w &lt;- <span class="hl kwd">runif</span>(it, 0, 1)
+<span class="hl com">#randomly draw w_i's</span>
+w &lt;- <span class="hl kwd">sapply</span>(w, func_ifoutside)
+<span class="hl com">#<span class="hl kwa">for</span> if w not <span class="hl kwa">in</span> [0, 1]</span>
+g_w &lt;- <span class="hl kwd">sapply</span>(w, func_g)
+#<span class="hl kwa">function</span> <span class="hl kwd">g</span>(w_i)'s where <span class="hl kwd">g</span>(x) =  likelihood / w_i 
+w.star &lt;- g_w / <span class="hl kwd">sum</span>(g_w)
+#w.star = weights = <span class="hl kwd">g</span>(x)/<span class="hl kwd">sum</span>(<span class="hl kwd">g</span>(x))
+it.vec &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(it, it))
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w&quot;</span>=w, <span class="hl str">&quot;w.star&quot;</span>=w.star, <span class="hl str">&quot;it&quot;</span>=it.vec)
+<span class="hl kwd">return</span>(df)
+}
+
+func_compare &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(w, w.star, N.mu, N.sig){
+  it &lt;- <span class="hl kwd">length</span>(w)
+  post.mean&lt;- <span class="hl kwd">sum</span>(w.star*w)
+  post.sd &lt;- <span class="hl kwd">sqrt</span>(<span class="hl kwd">sum</span>(w.star*(w - post.mean)^2))
+  compare &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;IS&quot;</span>=<span class="hl kwd">c</span>(post.mean, post.sd), <span class="hl str">&quot;Norm Apprx&quot;</span> =<span class="hl kwd">c</span>(N.mu, N.sig), <span class="hl str">&quot;Diff&quot;</span>=<span class="hl kwd">c</span>(post.mean-N.mu, post.sd-N.sig))
+  <span class="hl kwd">rownames</span>(compare) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;mean&quot;</span>, <span class="hl str">&quot;sd&quot;</span>) 
+  <span class="hl kwd">return</span>(compare)
+}
+
+func_plotsC &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it.vec, Y.vec){
+
+df1 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[1], Y.vec)
+df2 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[2], Y.vec)
+df3 &lt;- <span class="hl kwd">func_w.star</span>(it.vec[3], Y.vec)
+
+compare1 &lt;- <span class="hl kwd">func_compare</span>(df1$w, df1$w.star, N.mu, N.sig)
+compare2 &lt;- <span class="hl kwd">func_compare</span>(df2$w, df2$w.star, N.mu, N.sig)
+compare3 &lt;- <span class="hl kwd">func_compare</span>(df3$w, df3$w.star, N.mu, N.sig)
+
+table1 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare1, dec))
+table2 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare2, dec))
+table3 &lt;- <span class="hl kwd">tableGrob</span>(<span class="hl kwd">round</span>(compare3, dec))
+
+big.df &lt;- <span class="hl kwd">rbind</span>(df1, df2, df3)
+
+dat_text &lt;- <span class="hl kwd">data.frame</span>(label =<span class="hl kwd">c</span>(
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df1$w.star), 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df2$w.star), 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;w.star sd=&quot;</span>, <span class="hl kwd">round</span>(<span class="hl kwd">sd</span>(df3$w.star), 10))
+                ),
+                       Iteration = it.vec)
+
+df_w.star &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w.star&quot;</span>=big.df$w.star, <span class="hl str">&quot;Iteration&quot;</span>=big.df$it )
+print.Y.vec &lt;- <span class="hl kwd">paste</span>(Y.vec, collapse=<span class="hl str">&quot;,&quot;</span>)
+name &lt;- <span class="hl kwd">paste</span>(<span class="hl str">&quot;Important Sampling Weights <span class="hl kwa">for</span> Y=(&quot;</span>, print.Y.vec, <span class="hl str">&quot;)&quot;</span>)
+
+plot &lt;-  <span class="hl kwd">ggplot</span>(df_w.star, <span class="hl kwd">aes</span>(w.star))+<span class="hl kwd">geom_histogram</span>(<span class="hl kwd">aes</span>(y=..density..), color=<span class="hl str">&quot;black&quot;</span>, alpha=0.5)+
+   <span class="hl kwd">facet_wrap</span>(~Iteration, ncol=3)+
+  <span class="hl kwd">ggtitle</span>(<span class="hl kwd">paste</span>(name))+
+  <span class="hl kwd">theme</span>( axis.text.x=<span class="hl kwd">element_blank</span>()
+        ,axis.text.y=<span class="hl kwd">element_blank</span>()
+        )+
+  <span class="hl kwd">geom_text</span>(data=dat_text, mapping=<span class="hl kwd">aes</span>(x=<span class="hl kwa">Inf</span>, y = <span class="hl kwa">Inf</span>, label=label), hjust=1.5, vjust=2, size=4)+
+  <span class="hl kwd">xlab</span>(<span class="hl kwd">TeX</span>(<span class="hl str">&quot;$w^*$=weights&quot;</span>))
+
+gs &lt;- <span class="hl kwd">list</span>(plot, table1, table2, table3)
+<span class="hl kwd">grid.arrange</span>(grobs=gs, 
+              widths = <span class="hl kwd">c</span>(1, 1, 1), 
+              heights =2:1,
+              layout_matrix = <span class="hl kwd">rbind</span>( <span class="hl kwd">c</span>(1, 1, 1),
+                                     <span class="hl kwd">c</span>(2, 3, 4)
+ ))
+}
+```
+
+```{r p3c, fig.height=5, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>}
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+
+<span class="hl kwd">set.seed</span>(0603031)
+Y.vec &lt;- <span class="hl kwd">c</span>(125, 18, 20, 34)
+<span class="hl kwd">func_plotsC</span>(it.vec, Y.vec)
+
+<span class="hl kwd">set.seed</span>(0603032)
+Y.vec &lt;- <span class="hl kwd">c</span>(14, 0, 1,5)
+<span class="hl kwd">func_plotsC</span>(it.vec, Y.vec)
+```
+Note that the histograms of the weights, $w^*$, are very similar <span class="hl kwa">for</span> both sets of data.  This is because the importance <span class="hl kwa">function</span> is not dependent on the <span class="hl kwd">data</span> (like it was <span class="hl kwa">for</span> when using the normal approximation data <span class="hl kwa">for</span> a norma importance <span class="hl kwa">function</span>). 
+
+\newpage  
+<span class="hl com">## Problem 4  </span>
+
+<span class="hl com">### Problem 4a  </span>
+Solve the following problem posted by the Reverend Thomas Bayes <span class="hl kwa">in</span> his essay <span class="hl str">&quot;Essay Towards Solving a Problem <span class="hl kwa">in</span> the Doctrine of Chances,&quot;</span> which was published <span class="hl kwa">in</span> the *Philosophical Transactions of the Royal Society* (London) <span class="hl kwa">in</span> 1763:  
+*Given* the number of times <span class="hl kwa">in</span> which an unknown event has happened and failed: *Required* the chance that the probability of its happening <span class="hl kwa">in</span> a single trial lies somewhere between any tow degrees of probability that can be named.  
+In other words, <span class="hl kwa">if</span> the number of the successful happenings of the event is $p$ and the failures $q$, and <span class="hl kwa">if</span> the named <span class="hl str">&quot;degrees&quot;</span> of the probability are $b$ and $f$, respectively, compute: $\int_{b}^f x^<span class="hl kwd">p</span> (1 - x)^q dx / \int_{0}^1 x^<span class="hl kwd">p</span> (1 - x)^q dx$ via important sampling.  Take $p=1, \ q=4, \ b=0.7, \ f = 0.9$. 
+
+
+```{r p4a-functions}
+func_Like.Y &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(x){ x^1 * (1 - x)^4 }
+
+func_plots &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(big.df, text.df, name){
+df_w.star &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w.star&quot;</span>=big.df$w.star, <span class="hl str">&quot;Iteration&quot;</span>=big.df$it )
+name &lt;- <span class="hl kwd">paste</span>(name, <span class="hl str">&quot;Important Sampling&quot;</span>)
+plot &lt;-  <span class="hl kwd">ggplot</span>(df_w.star, <span class="hl kwd">aes</span>(w.star))+<span class="hl kwd">geom_histogram</span>(<span class="hl kwd">aes</span>(y=..density..), color=<span class="hl str">&quot;black&quot;</span>, alpha=0.5)+
+   <span class="hl kwd">facet_wrap</span>(~Iteration, ncol=3)+
+  <span class="hl kwd">ggtitle</span>(<span class="hl kwd">paste</span>(name))+
+  <span class="hl kwd">theme</span>( axis.text.x=<span class="hl kwd">element_blank</span>()
+        ,axis.text.y=<span class="hl kwd">element_blank</span>()
+        )+
+  <span class="hl kwd">geom_text</span>(data=text.df, mapping=<span class="hl kwd">aes</span>(x=<span class="hl kwa">Inf</span>, y = <span class="hl kwa">Inf</span>, label=label), hjust=1.5, vjust=2, size=4)+
+  <span class="hl kwd">xlab</span>(<span class="hl kwd">TeX</span>(<span class="hl str">&quot;$w^*$=weights&quot;</span>))
+plot
+}
+```
+
+```{r p4a-Uniform, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>, fig.height=3}
+func_J.Uniform &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+x &lt;- <span class="hl kwd">runif</span>(it, b, f)
+w &lt;- x / <span class="hl kwd">dunif</span>(x, b, f)
+J &lt;- <span class="hl kwd">sum</span>((w * <span class="hl kwd">func_Like.Y</span>(x))/<span class="hl kwd">sum</span>(w))
+<span class="hl kwd">return</span>(<span class="hl kwd">c</span>(J))
+}
+
+func_w.star.Uniform &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+w &lt;- <span class="hl kwd">runif</span>(it, b, f)
+g_w &lt;- <span class="hl kwd">func_Like.Y</span>(w) / w
+w.star &lt;- g_w / <span class="hl kwd">sum</span>(g_w)
+it.vec &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(it, it))
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w&quot;</span>=w, <span class="hl str">&quot;w.star&quot;</span>=w.star, <span class="hl str">&quot;it&quot;</span>=it.vec)
+<span class="hl kwd">return</span>(df)
+}
+
+func_big.df.Uniform &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it.vec, b, f){
+df1 &lt;- <span class="hl kwd">func_w.star.Uniform</span>(it.vec[1], b, f)
+df2 &lt;- <span class="hl kwd">func_w.star.Uniform</span>(it.vec[2], b, f)
+df3 &lt;- <span class="hl kwd">func_w.star.Uniform</span>(it.vec[3], b, f)
+big.df &lt;- <span class="hl kwd">rbind</span>(df1, df2, df3)
+}
+
+b &lt;- 0.7
+f &lt;- 0.9
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+<span class="hl kwd">set.seed</span>(0604011)
+IS.Uniform.J &lt;- <span class="hl kwd">mapply</span>(func_J.Uniform, it.vec, b, f)
+
+Uniform.df &lt;- <span class="hl kwd">func_big.df.Uniform</span>(it.vec, b, f)
+Uniform.text.df &lt;- <span class="hl kwd">data.frame</span>(label =<span class="hl kwd">c</span>(
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J=&quot;</span>, <span class="hl kwd">round</span>(IS.Uniform.J[1], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J=&quot;</span>, <span class="hl kwd">round</span>(IS.Uniform.J[2], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J=&quot;</span>, <span class="hl kwd">round</span>(IS.Uniform.J[3], 10))
+                ),
+                       Iteration = it.vec)
+<span class="hl kwd">func_plots</span>(Uniform.df, Uniform.text.df, <span class="hl str">&quot;Uniform&quot;</span>)
+
+```
+
+```{r p4a-Beta, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>, fig.height=3}
+func_J.Beta &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+x &lt;- <span class="hl kwd">rbeta</span>(it, b+1, f+1)
+w &lt;- x / <span class="hl kwd">dbeta</span>(x, b+1, f+1)
+J &lt;- <span class="hl kwd">sum</span>((w * <span class="hl kwd">func_Like.Y</span>(x))/<span class="hl kwd">sum</span>(w))
+<span class="hl kwd">return</span>(<span class="hl kwd">c</span>(J))
+}
+
+func_w.star.Beta &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+w &lt;- <span class="hl kwd">rbeta</span>(it, b+1, f+1)
+g_w &lt;- <span class="hl kwd">func_Like.Y</span>(w) / w
+w.star &lt;- g_w / <span class="hl kwd">sum</span>(g_w)
+it.vec &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(it, it))
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w&quot;</span>=w, <span class="hl str">&quot;w.star&quot;</span>=w.star, <span class="hl str">&quot;it&quot;</span>=it.vec)
+<span class="hl kwd">return</span>(df)
+}
+
+func_big.df.Beta &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it.vec, b, f){
+df1 &lt;- <span class="hl kwd">func_w.star.Beta</span>(it.vec[1], b, f)
+df2 &lt;- <span class="hl kwd">func_w.star.Beta</span>(it.vec[2], b, f)
+df3 &lt;- <span class="hl kwd">func_w.star.Beta</span>(it.vec[3], b, f)
+big.df &lt;- <span class="hl kwd">rbind</span>(df1, df2, df3)
+}
+
+b &lt;- 0.7
+f &lt;- 0.9
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+<span class="hl kwd">set.seed</span>(0604012)
+IS.Beta.J &lt;- <span class="hl kwd">mapply</span>(func_J.Beta, it.vec, b, f)
+
+Beta.df &lt;- <span class="hl kwd">func_big.df.Beta</span>(it.vec, b, f)
+Beta.text.df &lt;- <span class="hl kwd">data.frame</span>(label =<span class="hl kwd">c</span>(
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Beta.J[1], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Beta.J[2], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Beta.J[3], 10))
+                ),
+                       Iteration = it.vec)
+<span class="hl kwd">func_plots</span>(Beta.df, Beta.text.df, <span class="hl str">&quot;Beta&quot;</span>)
+```
+
+```{r p4a-Normal, warning=<span class="hl kwa">FALSE</span>, message=<span class="hl kwa">FALSE</span>, fig.height=3}
+func_J.Normal &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+alpha &lt;- b + 1 
+beta &lt;- f + 1
+mean &lt;- alpha / (alpha + beta)
+var &lt;- (alpha*beta) / ( (alpha + beta)^2 * (alpha + beta + 1) )
+x &lt;- <span class="hl kwd">rnorm</span>(it, mean, <span class="hl kwd">sqrt</span>(var))
+w &lt;- x / <span class="hl kwd">dnorm</span>(x, mean, <span class="hl kwd">sqrt</span>(var))
+J &lt;- <span class="hl kwd">sum</span>((w * <span class="hl kwd">func_Like.Y</span>(x))/<span class="hl kwd">sum</span>(w))
+<span class="hl kwd">return</span>(<span class="hl kwd">c</span>(J))
+}
+
+func_w.star.Normal &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it, b, f){
+alpha &lt;- b + 1 
+beta &lt;- f + 1
+mean &lt;- alpha / (alpha + beta)
+var &lt;- (alpha*beta) / ( (alpha + beta)^2 * (alpha + beta + 1) )
+w &lt;- <span class="hl kwd">rnorm</span>(it, mean, <span class="hl kwd">sqrt</span>(var))
+g_w &lt;- <span class="hl kwd">func_Like.Y</span>(w) / w
+w.star &lt;- g_w / <span class="hl kwd">sum</span>(g_w)
+it.vec &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(it, it))
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;w&quot;</span>=w, <span class="hl str">&quot;w.star&quot;</span>=w.star, <span class="hl str">&quot;it&quot;</span>=it.vec)
+<span class="hl kwd">return</span>(df)
+}
+
+func_big.df.Normal &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(it.vec, b, f){
+df1 &lt;- <span class="hl kwd">func_w.star.Normal</span>(it.vec[1], b, f)
+df2 &lt;- <span class="hl kwd">func_w.star.Normal</span>(it.vec[2], b, f)
+df3 &lt;- <span class="hl kwd">func_w.star.Normal</span>(it.vec[3], b, f)
+big.df &lt;- <span class="hl kwd">rbind</span>(df1, df2, df3)
+}
+
+b &lt;- 0.7
+f &lt;- 0.9
+it.vec &lt;- <span class="hl kwd">c</span>(1e04, 1e05, 1e06)
+<span class="hl kwd">set.seed</span>(0604012)
+IS.Normal.J &lt;- <span class="hl kwd">mapply</span>(func_J.Normal, it.vec, b, f)
+
+Normal.df &lt;- <span class="hl kwd">func_big.df.Normal</span>(it.vec, b, f)
+Normal.text.df &lt;- <span class="hl kwd">data.frame</span>(label =<span class="hl kwd">c</span>(
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Normal.J[1], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Normal.J[2], 10)),
+                <span class="hl kwd">paste</span>(<span class="hl str">&quot;J1=&quot;</span>, <span class="hl kwd">round</span>(IS.Normal.J[3], 10))
+                ),
+                       Iteration = it.vec)
+<span class="hl kwd">func_plots</span>(Normal.df, Normal.text.df, <span class="hl str">&quot;Normal&quot;</span>)
+```
+
+
+\newpage  
+<span class="hl com">### Problem 4b  </span>
+Repeat the calculation using numerical integration.  Compare the results <span class="hl kwd">of</span> (a) <span class="hl kwd">and</span> (b).  
+
+```{r p4b}
+Integrate.J &lt;- <span class="hl kwd">integrate</span>(func_Like.Y, lower=b, upper=f)$value / <span class="hl kwd">integrate</span>(func_Like.Y, lower=0, upper=1)$value
+
+iteration &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;N/A&quot;</span>, it.vec, it.vec, it.vec)
+J.vec &lt;- <span class="hl kwd">c</span>(Integrate.J, IS.Uniform.J, IS.Beta.J, IS.Normal.J)
+Integrate.J.vec &lt;- <span class="hl kwd">rep</span>(Integrate.J, <span class="hl kwd">length</span>(J.vec))
+diff.J &lt;- J.vec - Integrate.J.vec
+
+result.4b &lt;- <span class="hl kwd">rbind</span>(iteration, <span class="hl kwd">round</span>(J.vec, 5), <span class="hl kwd">round</span>(diff.J, 5))
+<span class="hl kwd">rownames</span>(result.4b) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;It&quot;</span>, <span class="hl str">&quot;J&quot;</span>, <span class="hl str">&quot;J1-Intg&quot;</span>)
+```
+```{r p4b-table}
+knitr::<span class="hl kwd">kable</span>(result.4b, booktabs=T, <span class="hl str">'latex'</span>) %&gt;%
+  kableExtra::<span class="hl kwd">kable_styling</span>(latex_options=<span class="hl str">&quot;hold_position&quot;</span> ) %&gt;% #hold table <span class="hl kwa">in</span> place 
+  kableExtra::<span class="hl kwd">add_header_above</span>(<span class="hl kwd">c</span>(<span class="hl str">&quot; &quot;</span>=1, <span class="hl str">&quot;Integration&quot;</span>=1, <span class="hl str">&quot;IS - Uniform&quot;</span>=3, <span class="hl str">&quot;IS - Beta&quot;</span>=3, <span class="hl str">&quot;IS- Normal&quot;</span>=3)) #need to have a space <span class="hl kwa">in</span> empty columns 
+```
+
+<span class="hl com">## Problem 6a  </span>
+Under the likelihood $\theta^<span class="hl kwd">k</span> (1 - \theta)^{n-x}$ and the Beta$(a, b)$ <span class="hl kwd">prior</span> ($a$ and $b$ known) compute the exact posterior mean.  Repeat the calculation using the second-order Laplace approximation.  evaluate the relative error <span class="hl kwa">for</span> the data $n=5, \ x = 3$ and the prior values $a = b = \nicefrac{1}{2}$.  What is the relative error when $n = 25, \ x = 15$ (same prior)?  
+
+$$
+\begin{aligned}
+	&amp;\underline{\textbf{Exact}} \\
+	<span class="hl kwd">p_E</span>(\theta \mid Y) &amp; \propto \text{Beta}(x + a, \ n - x + b)  \quad \implies \quad 
+	\mu_{E} = \frac{ x + a}{ a + b + n} 
+	\\[2ex]
+	&amp;\underline{\textbf{2nd Laplace Approx}}
+	\\
+	\mu_{L} &amp; = \frac{ \sigma^*}{\sigma^\dagger} \cdot \frac{ \exp \left\{ - nh^*(\theta^*) \right\} }
+	{ \exp \left\{ - nh^<span class="hl kwd">\dagger</span>(\theta^\dagger) \right\} }
+	\\[2ex]
+	-nh^<span class="hl kwd">\dagger</span>(\theta) &amp; = <span class="hl kwd">\ell</span>(\theta \mid Y) + <span class="hl kwd">\ln</span>(<span class="hl kwd">p</span>(\theta) )
+	\\
+	&amp; \quad  \quad \arraycolsep=1pt \def\arraystretch{1.4}   \begin{array}{r c l}
+		<span class="hl kwd">\ell</span>(\theta \mid Y) &amp; =&amp; x <span class="hl kwd">\ln</span>(\theta) + (n - x) <span class="hl kwd">\ln</span>(\theta) \\
+		<span class="hl kwd">\ln</span>(<span class="hl kwd">p</span>(\theta)) &amp; =&amp; (a - 1) <span class="hl kwd">\ln</span>(\theta) + (b-1)<span class="hl kwd">\ln</span>(1 - \theta) 
+	\end{array} 
+	\\
+	&amp;= \alpha_\dagger  <span class="hl kwd">\ln</span>(\theta) + \beta_\dagger  <span class="hl kwd">\ln</span>(1 - \theta) 
+	\quad \quad \arraycolsep=1pt \def\arraystretch{1.4}  \begin{array}{r c l}
+	\alpha_\dagger &amp;=&amp; x + a -1 \\
+	\beta_\dagger &amp;=&amp; n - x + b - 1 
+	\end{array} 
+	\\[2ex]
+		-nh^*(\theta) &amp; = <span class="hl kwd">\ell</span>(\theta \mid Y) + <span class="hl kwd">\ln</span>(<span class="hl kwd">p</span>(\theta) ) + <span class="hl kwd">ln</span>(<span class="hl kwd">g</span>(\theta))
+	\\
+	&amp; \quad  \quad \begin{array}{r c l}
+	<span class="hl kwd">\ell</span>(\theta \mid Y) &amp; =&amp; x <span class="hl kwd">\ln</span>(\theta) + (n - x) <span class="hl kwd">\ln</span>(\theta) \\
+	<span class="hl kwd">\ln</span>(<span class="hl kwd">p</span>(\theta)) &amp; =&amp; (a - 1) <span class="hl kwd">\ln</span>(\theta) + (b-1)<span class="hl kwd">\ln</span>(1 - \theta) \\
+	<span class="hl kwd">ln</span>(<span class="hl kwd">g</span>(\theta)) &amp;=&amp; <span class="hl kwd">\ln</span>(\theta) 
+	\end{array} 
+	\\
+	&amp;= \alpha_* <span class="hl kwd">\ln</span>(\theta) + \beta_* <span class="hl kwd">\ln</span>(1 - \theta) 
+	\quad \quad \arraycolsep=1pt \def\arraystretch{1.4}  \begin{array}{r c l}
+	\alpha_* &amp;=&amp; x + a  \\
+	\beta_* &amp;=&amp; n - x + b - 1 
+	\end{array} 
+	\\[2ex]
+	\theta^{(\cdot)} &amp;  = 
+	<span class="hl kwd">\arg\max_\theta</span> (- nh^{(\cdot)}(\theta)) = 
+		\frac{ \partial - n h^{(\cdot)}(\theta) }{\partial \theta} =  \frac{\alpha_{(\cdot)}}{\theta} - \frac{\beta_{(\cdot)}}{1 - \theta} \stackrel{\text{set}}{=} 0 
+		\implies 
+		\theta^{(\cdot)} = 
+	 \frac{ \alpha_{(\cdot)} }{ \alpha_{(\cdot)} + \beta_{(\cdot)} }  
+	\\[1ex]
+	\sigma^{(\cdot)} &amp; = \left[ \frac{ \partial^2 h^{(\cdot)}(\theta)}{\partial \theta^2} \Big|_{\theta^{(\cdot)}} \right]^{-1/2}
+	= \left[ \frac{1}{n} <span class="hl kwd">\left</span>(  \frac{ \alpha_{(\cdot)}}{ (\theta^{(\cdot)})^2 } + \frac{\beta_{(\cdot)}}{(1 - \theta^{(\cdot)})^2}\right) \right]^{-1/2} 
+\end{aligned} 
+$$
+
+```{r p6a-<span class="hl kwa">function</span>}
+func_theta.dot &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(alpha, beta){
+  alpha / (alpha + beta)}
+
+func_sigma.dot &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(alpha, beta, theta, n){
+  <span class="hl kwd">sqrt</span>( ( (1/n) *(
+                 (alpha / theta^2) + (beta / ((1 - theta)^2))
+                )
+        )
+  )
+}
+
+func_nh.dot&lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(alpha, beta, theta){
+  theta^alpha * (1 - theta)^beta 
+}
+
+
+func_mu.Laplace &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(n, x, a, b){ 
+alpha.dagger &lt;- x + a - 1
+beta.dagger &lt;- n - x + b - 1 
+alpha.star &lt;- x + a 
+beta.star &lt;- n - x + b - 1 
+
+theta.dagger &lt;- <span class="hl kwd">func_theta.dot</span>(alpha.dagger, beta.dagger)
+theta.star   &lt;- <span class="hl kwd">func_theta.dot</span>(alpha.star,   beta.star)
+sigma.dagger &lt;- <span class="hl kwd">func_sigma.dot</span>(alpha.dagger, beta.dagger, theta.dagger, n)
+sigma.star   &lt;- <span class="hl kwd">func_sigma.dot</span>(alpha.star,   beta.star,   theta.star,   n)
+
+mu.Laplace &lt;- (sigma.star/sigma.dagger)*(<span class="hl kwd">func_nh.dot</span>(alpha.star, beta.star, theta.star)/<span class="hl kwd">func_nh.dot</span>(alpha.dagger, beta.dagger, theta.dagger))
+<span class="hl kwd">return</span>(mu.Laplace)
+}
+
+
+func_mu.Exact &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(n, x, a, b){
+  mu.Exact &lt;- (x + a) / (a + b +n)
+  <span class="hl kwd">return</span>(mu.Exact)
+}
+
+func_rel.error &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(n, x, a, b){
+  mu.Exact &lt;- <span class="hl kwd">func_mu.Exact</span>(n, x, a, b)
+  mu.Laplace &lt;- <span class="hl kwd">func_mu.Laplace</span>(n, x, a, b)
+  error &lt;- mu.Laplace - mu.Exact
+  relative.error &lt;- error / mu.Exact 
+  <span class="hl kwd">return</span>(relative.error)
+}
+```
+
+
+```{r 6a-data1}
+n1 &lt;- 5
+x1 &lt;- 3
+a1 &lt;- 1/2
+b1 &lt;- 1/2 
+
+mu.Laplace1 &lt;- <span class="hl kwd">func_mu.Laplace</span>(n1, x1, a1, b1)
+mu.Exact1 &lt;- <span class="hl kwd">func_mu.Exact</span>(n1, x1, a1, b1)
+rel.error1 &lt;- <span class="hl kwd">func_rel.error</span>(n1, x1, a1, b1)
+```
+
+```{r 6a-data2}
+n2 &lt;- 25
+x2 &lt;- 15
+a2 &lt;- 1/2
+b2 &lt;- 1/2 
+
+mu.Laplace2 &lt;- <span class="hl kwd">func_mu.Laplace</span>(n2, x2, a2, b2)
+mu.Exact2 &lt;- <span class="hl kwd">func_mu.Exact</span>(n2, x2, a2, b2)
+rel.error2 &lt;- <span class="hl kwd">func_rel.error</span>(n2, x2, a2, b2)
+```
+
+```{r 6a-table}
+one &lt;- <span class="hl kwd">c</span>( <span class="hl kwd">decimal</span>(n1,0)
+         ,<span class="hl kwd">round</span>(x1,0)
+         ,<span class="hl kwd">round</span>(a1,1)
+         ,<span class="hl kwd">round</span>(b1,1)
+         ,<span class="hl kwd">round</span>(mu.Exact1,dec)
+         ,<span class="hl kwd">round</span>(mu.Laplace1,dec)
+         ,<span class="hl kwd">round</span>(rel.error1, dec)
+        ) 
+two &lt;- <span class="hl kwd">c</span>( <span class="hl kwd">decimal</span>(n2,0)
+         ,<span class="hl kwd">round</span>(x2,0)
+         ,<span class="hl kwd">round</span>(a2,1)
+         ,<span class="hl kwd">round</span>(b2,1)
+         ,<span class="hl kwd">round</span>(mu.Exact2,dec)
+         ,<span class="hl kwd">round</span>(mu.Laplace2,dec)
+         ,<span class="hl kwd">round</span>(rel.error2, dec)
+        ) 
+table6a &lt;- <span class="hl kwd">cbind</span>(one, two)
+<span class="hl kwd">rownames</span>(table6a) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;Data.n&quot;</span>, <span class="hl str">&quot;Data.x&quot;</span>, <span class="hl str">&quot;Prior.a&quot;</span>, <span class="hl str">&quot;Prior.b&quot;</span>, <span class="hl str">&quot;Exact.mean&quot;</span>, <span class="hl str">&quot;Laplace.Mean&quot;</span>, <span class="hl str">&quot;Relative.Error&quot;</span>)
+<span class="hl kwd">colnames</span>(table6a) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;Part.1&quot;</span>, <span class="hl str">&quot;Part.2&quot;</span>)
+table6a &lt;- <span class="hl kwd">as.data.frame</span>(table6a)
+knitr::<span class="hl kwd">kable</span>(table6a, <span class="hl str">'markdown'</span>, align=<span class="hl str">'rrr'</span>)
+```
+
+\newpage  
+<span class="hl com">## Problem 1  </span>
+Recall the genetic linkage model of Section 4.1.  
+
+<span class="hl com">### Problem 1a  </span>
+For the data $Y = (125, 18, 20, 34)$ implement the *EM* algorithm.  Use a flat prior on $\theta$.  Try starting your algorithm at $\theta = .1, .2, .3, .4, .6$ and $.8$.  Did the algorithm converge <span class="hl kwa">for</span> all of these starting values? How do you access convergence?  How many iterations were required <span class="hl kwa">for</span> convergence?  
+
+$$
+\begin{aligned}
+\text{Given } Y &amp; = (y_1, y_2, y_3, y_4) \text{ with probabilities } <span class="hl kwd">\left</span>( \frac{ \theta + 2}{4}, \frac{ 1 - \theta}{4},  \frac{ 1 - \theta}{4}, \frac{ \theta}{4} \right) \\
+\text{Say } Y &amp; = (x, z, y_2, y_3, y_4) \text{ with probabilities } <span class="hl kwd">\left</span>( \frac{1}{2}, \frac{ \theta}{4}, \frac{ 1 - \theta}{4},  \frac{ 1 - \theta}{4}, \frac{ \theta}{4} \right) 
+\\[2ex]
+<span class="hl kwd">p</span>(Z \mid Y, \theta) &amp; \sim \text{Binomial}<span class="hl kwd">\left</span>(x + z, \  \frac{<span class="hl kwd">p</span>(z)}{<span class="hl kwd">p</span>(x) + <span class="hl kwd">p</span>(z)} \right) = \text{Binomial} <span class="hl kwd">\left</span>(y_1, \ \frac{ \theta / 4}{(\theta + 2)/4}  \right) = \text{Binomial} <span class="hl kwd">\left</span>( y_1, \ \frac{ \theta}{2 + \theta} \right)
+\\[2ex]
+<span class="hl kwd">p</span>(\theta \mid Y, Z) &amp;\sim
+<span class="hl kwd">\left</span>( \frac{1}{2} \right) ^{x}
+<span class="hl kwd">\left</span>( \frac{\theta}{4} \right)^{z} 
+<span class="hl kwd">\left</span>( \frac{1 - \theta}{4} \right)^{y_2 + y_3}
+<span class="hl kwd">\left</span>( \frac{\theta}{4} \right)^{y_4}
+\propto \theta^{z + x_5} (1 - \theta)^{y_2 + y_3}
+\\[2ex]
+&amp;\underline{\textbf{E Step}: \text{to get Q <span class="hl kwa">function</span>}}
+\\
+<span class="hl kwd">Q</span>(\theta, \theta^i) &amp; = \mathbb{E}_{Z \mid \theta^i} \left[ \log <span class="hl kwd">\left</span>( <span class="hl kwd">p</span>(\theta \mid Y, Z) \right) \right] 
+= \mathbb{E}_{Z \mid \theta^i} \Big[ (z + y_4)<span class="hl kwd">\log</span>(\theta) + (y_2 + y_3) <span class="hl kwd">\log</span>(1 - \theta) \mid \theta^i, Y \Big]
+\\
+&amp; = (y_2 + y_3) <span class="hl kwd">\log</span>(1 - \theta) + <span class="hl kwd">\left</span>( \mathbb{E}_{Z \mid \theta^i} \left[ Z \mid \theta^i, Y \right] + y_4 \right) <span class="hl kwd">\log</span>(\theta)
+\\
+&amp; \quad \quad \quad \quad <span class="hl kwd">p</span>(Z \mid Y, \theta^i) \sim \text{Binomial}(y_1, \theta/(\theta+2)) \implies 
+\mathbb{E}_{Z \mid \theta^i} \left[ Z \mid \theta^i, Y \right] = \frac{y_1 \theta^i}{\theta^i + 2}
+\\
+&amp; = (y_2 + y_3) <span class="hl kwd">\log</span>(1 - \theta) + <span class="hl kwd">\left</span>( \frac{y_1 \theta^i}{\theta^i + 2}+ y_4 \right) <span class="hl kwd">\log</span>(\theta)
+\\[1ex]
+&amp;\underline{\textbf{M Step}: \textstyle\arg\max_\theta <span class="hl kwd">Q</span>(\theta, \theta^i)}
+\\
+\frac{ \partial <span class="hl kwd">Q</span>(\theta, \theta^i)}{\partial \theta} &amp; = - \frac{y_2 + y_3}{1 - \theta} + \frac{ \mathbb{E}Z}{\theta} \stackrel{\text{set}}{=} 0 
+\quad \quad \implies \theta^{i+1} = \frac{ \mathbb{E}Z + y_4}{\mathbb{E}Z + y_2 + y_3 + y_4}
+\\[0.5ex]
+\theta^{i+1} &amp; = \frac{ \frac{y_1 \theta^i}{\theta^i + 2} + y_4}{\frac{y_1 \theta^i}{\theta^i + 2} + y_2 + y_3 + y_4}
+\end{aligned} 
+$$
+
+```{r p1EM-<span class="hl kwa">function</span>, eval=<span class="hl kwa">TRUE</span>}
+func_EM &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(start, max.iteration, Y){
+  theta_i &lt;- start
+  chain &lt;- <span class="hl kwd">rep</span>(<span class="hl kwa">NA</span>, max.iteration)
+  chain[1] &lt;- theta_i  
+  EZ_i &lt;- (Y[1]*theta_i)/(theta_i+2)
+  theta_i &lt;- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+  chain[2] &lt;- theta_i 
+  <span class="hl kwd"><span class="hl kwa">for</span></span> (j <span class="hl kwa">in</span> 3:max.iteration){
+    EZ_i &lt;- (Y[1]*theta_i)/(theta_i+2)
+    theta_i &lt;- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+    chain[j] &lt;- theta_i 
+    <span class="hl kwd"><span class="hl kwa">if</span></span> (<span class="hl kwd">abs</span>(chain[j]- chain[j-1]) &lt;= 1e-07){ 
+      estimate &lt;- <span class="hl kwd">decimal</span>(chain[j], 10)
+      <span class="hl kwa">break</span>  }
+    <span class="hl kwd"><span class="hl kwa">else</span></span> (estimate &lt;- <span class="hl str">&quot;DID NOT CONVERGE&quot;</span>)
+    }
+  it.used &lt;- <span class="hl kwd">length</span>(chain[!<span class="hl kwd">is.na</span>(chain)])
+  result &lt;- <span class="hl kwd">c</span>(start, estimate, it.used)
+  <span class="hl kwd">return</span>(result)
+}
+```
+
+
+```{r p1a, eval=<span class="hl kwa">TRUE</span>}
+Y1 &lt;- <span class="hl kwd">c</span>(125, 18, 20, 34)
+mle1 &lt;- 0.62682
+se1 &lt;- 0.05382
+print.Y1 &lt;- <span class="hl kwd">paste</span>(Y1, collapse=<span class="hl str">&quot;,&quot;</span>)
+
+start.1 &lt;- <span class="hl kwd">func_EM</span>(0.1, 100, Y1)
+start.2 &lt;- <span class="hl kwd">func_EM</span>(0.2, 100, Y1)
+start.3 &lt;- <span class="hl kwd">func_EM</span>(0.3, 100, Y1)
+start.4 &lt;- <span class="hl kwd">func_EM</span>(0.4, 100, Y1)
+start.6 &lt;- <span class="hl kwd">func_EM</span>(0.6, 100, Y1)
+start.8 &lt;- <span class="hl kwd">func_EM</span>(0.8, 100, Y1)
+
+table1a &lt;- <span class="hl kwd">cbind</span>(start.1, start.2, start.3, start.4, start.6, start.8)
+<span class="hl kwd">rownames</span>(table1a) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;Start Value&quot;</span>, <span class="hl str">&quot;Estimation&quot;</span>, <span class="hl str">&quot;Iterations Used&quot;</span>)
+<span class="hl kwd">colnames</span>(table1a) &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(<span class="hl str">&quot;&quot;</span>, 6))
+knitr::<span class="hl kwd">kable</span>(table1a, align=<span class="hl str">'rrrrrr'</span>, caption=<span class="hl kwd">paste</span>(<span class="hl str">&quot;EM <span class="hl kwa">for</span> Y=(&quot;</span>, print.Y1, <span class="hl str">&quot;)&quot;</span>), booktabs=T, <span class="hl str">'latex'</span>) %&gt;%
+  kableExtra::<span class="hl kwd">kable_styling</span>(latex_options=<span class="hl str">&quot;hold_position&quot;</span> )
+```
+
+Convergence is determined <span class="hl kwa">if</span> the the values within the chain have an absolute difference less than 1e-07.  
+
+
+\newpage  
+
+<span class="hl com">### Problem 1c  </span>
+Plot the normal approximation along with the normalized likelihood.  Is the normal approximation appropriate <span class="hl kwa">in</span> this case?  
+
+
+```{r p1c-graph}
+func_scalelike&lt;-<span class="hl kwd"><span class="hl kwa">function</span></span>(x,y1,y2,y3,y4){
+  like &lt;-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
+  like.max&lt;-<span class="hl kwd">max</span>(like)
+  like/like.max #normalized <span class="hl kwd">likelihood</span> (on scale from 0 to 1) 
+}
+
+func_scalenormal&lt;-<span class="hl kwd"><span class="hl kwa">function</span></span>(x, mean, sd){
+  scales::<span class="hl kwd">rescale</span>(<span class="hl kwd">dnorm</span>(x, mean, sd), to=<span class="hl kwd">c</span>(0, 1)) #<span class="hl kwd">normal</span> (on scale from 0 to 1) 
+}
+
+func_plots &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(yval, mle, se){
+colors &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;navy&quot;</span>, <span class="hl str">&quot;maroon&quot;</span>)
+norm.like &lt;-    <span class="hl kwd">stat_function</span>(fun = func_scalelike, args = <span class="hl kwd">list</span>(y1=yval[1], y2=yval[2], y3=yval[3], y4=yval[4]), lwd = 1.5, linetype=<span class="hl str">&quot;solid&quot;</span>, <span class="hl kwd">aes</span>(col=<span class="hl str">&quot;Normalized Likelihood&quot;</span>))
+normal.approx &lt;-<span class="hl kwd">stat_function</span>(fun = func_scalenormal, args = <span class="hl kwd">list</span>(mean=mle, sd=se), lwd = 2.5, linetype=<span class="hl str">&quot;dotted&quot;</span>, <span class="hl kwd">aes</span>(col=<span class="hl str">&quot;Normal Approximation&quot;</span>))
+
+print.yval &lt;- <span class="hl kwd">paste</span>(yval, collapse=<span class="hl str">&quot;, &quot;</span>)
+name &lt;- <span class="hl kwd">paste</span>(<span class="hl str">&quot;Normal Likelihood and Normal Approximation <span class="hl kwa">for</span> Y=(&quot;</span>, print.yval, <span class="hl str">&quot;)&quot;</span>)
+
+
+x &lt;- <span class="hl kwd">seq</span>(0, 1, 0.001)
+df &lt;- <span class="hl kwd">data.frame</span>(<span class="hl str">&quot;X&quot;</span>=x)
+<span class="hl kwd">ggplot</span>(data=df, <span class="hl kwd">aes</span>(x=X))+
+  norm.like+normal.approx+
+  <span class="hl kwd">ggtitle</span>(<span class="hl kwd">paste</span>(name))+
+  <span class="hl kwd">theme</span>(axis.title.x = <span class="hl kwd">element_blank</span>())+
+  <span class="hl kwd">scale_colour_manual</span>(<span class="hl str">&quot;&quot;</span>, values = <span class="hl kwd">c</span>(colors[1], colors[2])) 
+  #<span class="hl kwd">theme</span>(legend.position = <span class="hl str">&quot;bottom&quot;</span>)+
+
+}
+```
+
+
+```{r p1c, warning=<span class="hl kwa">FALSE</span>}
+<span class="hl kwd">func_plots</span>(Y1, mle1, se1)
+```
+The Normal Approximation is appropirate <span class="hl kwa">in</span> this case.  
+
+<span class="hl com">### Problem 1d  </span>
+<span class="hl kwd">Repeat</span> (a) <span class="hl kwd">and</span> (c) <span class="hl kwa">for</span> the data $Y = (14, 0, 1, 5)$.  did the algorithm coverage <span class="hl kwa">for</span> all of the above starting values?  
+
+
+```{r p1d_a}
+Y2 &lt;- <span class="hl kwd">c</span>(14, 0, 1, 5)
+mle2 &lt;- 0.903344
+se2 &lt;- 0.09348
+print.Y2 &lt;- <span class="hl kwd">paste</span>(Y2, collapse=<span class="hl str">&quot;,&quot;</span>)
+
+start.1 &lt;- <span class="hl kwd">func_EM</span>(0.1, 100, Y2)
+start.2 &lt;- <span class="hl kwd">func_EM</span>(0.2, 100, Y2)
+start.3 &lt;- <span class="hl kwd">func_EM</span>(0.3, 100, Y2)
+start.4 &lt;- <span class="hl kwd">func_EM</span>(0.4, 100, Y2)
+start.6 &lt;- <span class="hl kwd">func_EM</span>(0.6, 100, Y2)
+start.8 &lt;- <span class="hl kwd">func_EM</span>(0.8, 100, Y2)
+
+table1d_a &lt;- <span class="hl kwd">cbind</span>(start.1, start.2, start.3, start.4, start.6, start.8)
+<span class="hl kwd">rownames</span>(table1d_a) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;Start Value&quot;</span>, <span class="hl str">&quot;Estimation&quot;</span>, <span class="hl str">&quot;Iterations Used&quot;</span>)
+<span class="hl kwd">colnames</span>(table1d_a) &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(<span class="hl str">&quot;&quot;</span>, 6))
+
+knitr::<span class="hl kwd">kable</span>(table1d_a, align=<span class="hl str">'rrrrrr'</span>, caption=<span class="hl kwd">paste</span>(<span class="hl str">&quot;EM <span class="hl kwa">for</span> Y=(&quot;</span>, print.Y2, <span class="hl str">&quot;)&quot;</span>), booktabs=T, <span class="hl str">'latex'</span>) %&gt;%
+  kableExtra::<span class="hl kwd">kable_styling</span>(latex_options=<span class="hl str">&quot;hold_position&quot;</span> )
+```
+
+
+```{r p1d_c, warning=<span class="hl kwa">FALSE</span>}
+<span class="hl kwd">func_plots</span>(Y2, mle2, se2)
+```
+The Normal Approximation is not appropriate <span class="hl kwa">in</span> this case.  
+
+
+<span class="hl com">## Problem 2  </span>
+Repeat Problem <span class="hl kwd">1</span> (a) <span class="hl kwd">and</span> (d) using the Monte Carlo *EM*.  How did you assess convergence.  
+```{r p2a-MCEM}
+func_MCEM &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(start, max.iteration, Y, m){
+  theta_i &lt;- start
+  chain &lt;- <span class="hl kwd">rep</span>(<span class="hl kwa">NA</span>, max.iteration)
+  chain[1] &lt;- theta_i  
+  p.z &lt;- theta_i / (theta_i +2)
+  EZ_i &lt;- <span class="hl kwd">mean</span>(<span class="hl kwd">rbinom</span>(m, Y[1], p.z))
+  theta_i &lt;- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+  chain[2] &lt;- theta_i 
+  <span class="hl kwd"><span class="hl kwa">for</span></span> (j <span class="hl kwa">in</span> 3:max.iteration){
+    p.z &lt;- theta_i / (theta_i +2)
+    EZ_i &lt;- <span class="hl kwd">mean</span>(<span class="hl kwd">rbinom</span>(m, Y[1], p.z))
+    theta_i &lt;- (EZ_i + Y[4]) / (EZ_i + Y[2] + Y[3] + Y[4])
+    chain[j] &lt;- theta_i 
+    <span class="hl kwd"><span class="hl kwa">if</span></span> (<span class="hl kwd">abs</span>(chain[j]- chain[j-1]) &lt;= 1e-07){ 
+      estimate &lt;- <span class="hl kwd">decimal</span>(chain[j], 10)
+      <span class="hl kwa">break</span>  }
+    <span class="hl kwd"><span class="hl kwa">else</span></span> (estimate &lt;- <span class="hl str">&quot;DID NOT CONVERGE&quot;</span>)
+    }
+  it.used &lt;- <span class="hl kwd">length</span>(chain[!<span class="hl kwd">is.na</span>(chain)])
+  result &lt;- <span class="hl kwd">c</span>(start, estimate, it.used)
+  <span class="hl kwd">return</span>(result)
+}
+
+func_MCMC.m &lt;- <span class="hl kwd"><span class="hl kwa">function</span></span>(start.vec, max.iteration, Y, m){
+
+start.1 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[1], max.iteration, Y, m)
+start.2 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[2], max.iteration, Y, m)
+start.3 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[3], max.iteration, Y, m)
+start.4 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[4], max.iteration, Y, m)
+start.6 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[5], max.iteration, Y, m)
+start.8 &lt;- <span class="hl kwd">func_MCEM</span>(start.vec[6], max.iteration, Y, m)
+
+table&lt;- <span class="hl kwd">cbind</span>(start.1, start.2, start.3, start.4, start.6, start.8)
+<span class="hl kwd">rownames</span>(table) &lt;- <span class="hl kwd">c</span>(<span class="hl str">&quot;Start Value&quot;</span>, <span class="hl str">&quot;Estimation&quot;</span>, <span class="hl str">&quot;Iterations Used&quot;</span>)
+<span class="hl kwd">colnames</span>(table) &lt;- <span class="hl kwd">c</span>(<span class="hl kwd">rep</span>(<span class="hl str">&quot;&quot;</span>, 6))
+
+print.Y &lt;- <span class="hl kwd">paste</span>(Y, collapse=<span class="hl str">&quot;,&quot;</span>)
+
+knitr::<span class="hl kwd">kable</span>(table, align=<span class="hl str">'rrrrrr'</span>, caption=<span class="hl kwd">paste</span>(<span class="hl str">&quot;MCEM <span class="hl kwa">for</span> Y=(&quot;</span>, print.Y, <span class="hl str">&quot;), m=&quot;</span>,m), booktabs=T, <span class="hl str">'latex'</span>) %&gt;%
+   kableExtra::<span class="hl kwd">kable_styling</span>(latex_options=<span class="hl str">&quot;hold_position&quot;</span> )
+}
+```
+
+```{r p2_1}
+Y1 &lt;- <span class="hl kwd">c</span>(125, 18, 20, 34)
+start.vec &lt;- <span class="hl kwd">c</span>(0.1, 0.2, 0.3, 0.4, 0.6, 0.8)
+
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y1, 1e02)
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y1, 1e03)
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y1, 1e04)
+```
+
+```{r p2_2}
+Y2 &lt;- <span class="hl kwd">c</span>(14, 0, 1, 5)
+start.vec &lt;- <span class="hl kwd">c</span>(0.1, 0.2, 0.3, 0.4, 0.6, 0.8)
+
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y2, 1e02)
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y2, 1e03)
+<span class="hl kwd">func_MCMC.m</span>(start.vec, 10000, Y2, 1e04)
+```
+
+</pre></div>
+<div class="error"><pre class="knitr r">## Error: &lt;text&gt;:2:13: unexpected numeric constant
+## 1: ---
+## 2: title: STAT 457
+##                ^
+</pre></div>
+</div></div>
+
+  <p>The R session information (including the OS info, R version and all
+    packages used):</p>
+
+<div class="chunk" id="session-info"><div class="rcode"><div class="source"><pre class="knitr r">    <span class="hl kwd">sessionInfo</span><span class="hl std">()</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## R version 3.6.1 (2019-07-05)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows 10 x64 (build 17763)
+## 
+## Matrix products: default
+## 
+## locale:
+## [1] LC_COLLATE=English_United States.1252  LC_CTYPE=English_United States.1252   
+## [3] LC_MONETARY=English_United States.1252 LC_NUMERIC=C                          
+## [5] LC_TIME=English_United States.1252    
+## 
+## attached base packages:
+## [1] grid      stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] MCMCpack_1.4-4      MASS_7.3-51.4       coda_0.19-3         dplyr_0.8.3        
+##  [5] gtable_0.3.0        numDeriv_2016.8-1.1 matlib_0.9.2        latex2exp_0.4.0    
+##  [9] gridExtra_2.3       readr_1.3.1         ggplot2_3.2.1      
+## 
+## loaded via a namespace (and not attached):
+##  [1] rgl_0.100.30            Rcpp_1.0.2              lattice_0.20-38        
+##  [4] assertthat_0.2.1        zeallot_0.1.0           digest_0.6.20          
+##  [7] mime_0.7                R6_2.4.0                cellranger_1.1.0       
+## [10] MatrixModels_0.4-1      backports_1.1.4         evaluate_0.14          
+## [13] highr_0.8               httr_1.4.1              pillar_1.4.2           
+## [16] rlang_0.4.0             lazyeval_0.2.2          curl_4.2               
+## [19] readxl_1.3.1            SparseM_1.77            rstudioapi_0.10        
+## [22] data.table_1.12.4       miniUI_0.1.1.1          car_3.0-3              
+## [25] Matrix_1.2-17           rmarkdown_1.14          labeling_0.3           
+## [28] webshot_0.5.1           stringr_1.4.0           foreign_0.8-71         
+## [31] htmlwidgets_1.5.1       tinytex_0.15            munsell_0.5.0          
+## [34] shiny_1.3.2             compiler_3.6.1          httpuv_1.5.1           
+## [37] xfun_0.8                pkgconfig_2.0.2         mcmc_0.9-6             
+## [40] htmltools_0.3.6         tidyselect_0.2.5        tibble_2.1.3           
+## [43] rio_0.5.16              viridisLite_0.3.0       crayon_1.3.4           
+## [46] withr_2.1.2             later_0.8.0             jsonlite_1.6           
+## [49] xtable_1.8-4            magrittr_1.5            scales_1.0.0           
+## [52] zip_2.0.4               stringi_1.4.3           carData_3.0-2          
+## [55] promises_1.0.1          xml2_1.2.2              vctrs_0.2.0            
+## [58] openxlsx_4.1.0.1        kableExtra_1.1.0        tools_3.6.1            
+## [61] forcats_0.4.0           manipulateWidget_0.10.0 glue_1.3.1             
+## [64] purrr_0.3.2             hms_0.5.0               crosstalk_1.0.0        
+## [67] abind_1.4-5             yaml_2.2.0              colorspace_1.4-1       
+## [70] rvest_0.3.4             knitr_1.24              haven_2.1.1            
+## [73] quantreg_5.51
+</pre></div>
+<div class="source"><pre class="knitr r">    <span class="hl kwd">Sys.time</span><span class="hl std">()</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] &quot;2019-11-29 21:23:55 CST&quot;
+</pre></div>
+</div></div>
+
+
+</body>
+</html>
