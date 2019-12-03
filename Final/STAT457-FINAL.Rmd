@@ -1,0 +1,75 @@
+---
+title: "STAT 457 - FINAL"
+author: "Martha Eichlersmith"
+date: "2019-12-12"
+output: 
+  pdf_document:
+    fig_caption: yes
+#    number_sections: true
+header-includes: 
+- \usepackage{color}
+- \usepackage{mathtools}
+- \usepackage{bbm} #for mathbb for numbers
+- \usepackage{amsbsy}
+- \usepackage{caption}
+- \usepackage{booktabs}
+- \usepackage{geometry}
+- \usepackage{float} #to hold things in place
+- \floatplacement{figure}{H}
+- \usepackage{lastpage}
+- \usepackage{fancyhdr}
+- \pagestyle{fancy}
+- \fancyhf{}
+- \fancyhead[L]{STAT 457 Fall 2019 \\ Final}
+- \fancyhead[R]{Martha Eichlersmith \\ Page \thepage\ of\ \pageref*{LastPage}}  
+- \setlength{\headheight}{22.5pt} #to remove \fancyhead error for head height
+geometry: "left=0.75in,right=0.75in,top=1.1in,bottom=1in" 
+---
+
+```{r setup, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
+library(ggplot2) #ggplot
+library(gridExtra) #organize plots
+library(grid) #organize plots
+library(latex2exp) #latex in ggplot titles 
+library(dplyr) #for piping 
+knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
+knitr::opts_chunk$set(echo=FALSE)
+decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
+dec <- 3
+#knitr::opts_chunk$set(echo=FALSE) 
+```
+
+\newpage  
+# Problem 1  
+Recall the genetic linkage model of Section 5.1.  
+
+## Problem 1a  
+### Problem 1a Part 1
+For the data $Y = (125,18,30,34)$, implement the Gibbs sampler alogrithm.  Use a flat prior on $\theta$.  
+Plot $\theta^i$ versus iteration $i$.  How long a chain (or chains) did you use?  Did you toss out any initial vlaues?  
+
+### Problem 1a 2
+Compute the posterior mean and posterior variance based on your chain.  
+
+### Problem 1a 3
+Plot the estimated observed posterior along with the normalized likelihood.  
+
+### Problem 1a Part 4
+Discuss the adequacy of the estimate.  
+
+## Problem 1b  
+Repeat (1a) for $Y = (14, 0, 1, 5)$.  
+
+## Problem 1c 
+Run 20 chains with independent starting values.  Compute the average of the $\theta$'s in each chain.  
+Calculate the standard deviation of the 20 averages.  Intepret this value.  
+Compute the standard deviation of the $\theta$'s in each chain.  
+Divide each SD by the square root of the number of iterations.  Average these "standard errors" and compare this to the average 
+
+# Problem 2  
+
+# Problem 3  
+
+# Problem 4  
+
+# Problem 5  
