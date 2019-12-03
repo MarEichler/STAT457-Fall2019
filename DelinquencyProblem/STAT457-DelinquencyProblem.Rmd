@@ -1,6 +1,6 @@
 ---
-title: STAT 457 Delinquency Problem 
-author: Martha Eichlersmith
+#title: STAT 457 Delinquency Problem 
+#author: Martha Eichlersmith
 output:
   pdf_document:
     fig_caption: yes
@@ -12,7 +12,15 @@ header-includes:
   - \usepackage{booktabs}
   - \usepackage{geometry}
   - \usepackage{caption} #to remove automatic table name and number - \captionsetup[table]{labelformat=empty}, put code under ---
-geometry: "left=1.75cm,right=1.75cm,top=1.5cm,bottom=2cm" 
+  - \usepackage{lastpage} #for pageref*{LastPage} - to get total # of pages
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[L]{STAT 457 Fall 2019 \\ Delinquency Problem}
+  - \fancyhead[R]{Martha Eichlersmith \\ Page \thepage\ of\ \pageref*{LastPage}}  
+  - \setlength{\headheight}{22.5pt} #to remove \fancyhead error for head height
+#left-even pages (LE) right-odd pages (RE)
+geometry: "left=0.75in,right=0.75in,top=1.1in,bottom=1in" 
 
 ---
 ```{r setup, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
@@ -30,37 +38,26 @@ library(MCMCpack) #for dirichelt
 knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
 knitr::opts_chunk$set(echo=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
-dec <- 5
+dec <- 3
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
 ```
 
-Is delinquency related to birth order? 
-
-```{r props}
-alpha <- c(127, 123,  93, 17) #/360 #most delinquent
-gamma <- c(345, 209, 158, 65) #/777 #least delinquent
-parameters <- rbind(alpha, gamma)
+```{r func_tableparam}
+#FUNCTION: PUT PARAMETERS INTO TABLE
+func_tableparam <- function(parameters, name){
 total <- c(sum(alpha), sum(gamma))
 diff <- c(alpha-gamma, sum(alpha-gamma))
 table <- rbind( cbind(parameters, total), diff)
 rownames(table) <- c("Most Delinquent", "Least Delinquent", "Difference (Most - Least)")
 colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
-knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption="Row Proportion") %>%
-  kableExtra::kable_styling(latex_options="hold_position" )
 
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption=paste("Dirichlet Parameters:", name)) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) 
+}
 ```
 
-```{r function}
-func_diff <- function(matrix){
-diff.matrix <- cbind( #most - least
-   matrix[,1] - matrix[,5] #diff for Oldest
-  ,matrix[,2] - matrix[,6] #diff for in-between
-  ,matrix[,3] - matrix[,7] #diff for youngest
-  ,matrix[,4] - matrix[,8] #diff for only-child
-   )
-diff.matrix
-}
-
+```{r func_values}
+#FUNCTION: RETURN IT, MEAN, CI, AND PVALUE 
 func_values <- function(vec){
   it <- length(vec)
   CI.val <- decimal(quantile(vec, c(0.025, 0.975)), dec)
@@ -70,7 +67,9 @@ func_values <- function(vec){
   vec <- c(it, mean, CI.95, pval)
   vec
 }
-
+```
+```{r func_delinq}
+#FUNCTION: SIMIULATE VALUES 
 func_delinq <- function(it){
 set.seed(050104)
 prop <- rdirichlet(it, t(parameters))
@@ -82,51 +81,88 @@ diff <- cbind( #most - least
    )
 apply(diff, 2, func_values)
 }
-
 ```
-
-```{r calculation}
-it.vec <- c(1e04, 1e05, 1e06)
-it.1 <- func_delinq(it.vec[1])
-it.2 <- func_delinq(it.vec[2])
-it.3 <- func_delinq(it.vec[3])
-```
-
-```{r tables}
-func_table <- function(i, name){
+```{r func_table}
+#FUNCTION: put into a table 
+func_table <- function(i, name, it.1, it.2, it.3){
 table <- cbind(it.1[,i], it.2[,i] , it.3[,i])
 rownames(table) <- c("Iterations", "Mean", "95% CI", "P(diff>0)")
 title <- paste("Difference in Proportion for", name, ": Most Delinquent - Least Delinquent")
-#table
-knitr::kable(table, booktabs=T, 'latex', caption=title) %>%
-  kableExtra::kable_styling(latex_options="hold_position" ) #hold table in place 
+table
 }
-
-func_table(1, "Oldest")
-func_table(2, "In-Between")
-func_table(3, "Youngest")
-func_table(4, "Only")
 ```
-
-```{r chisqtest}
+```{r func_chisq}
+#FUNCTION: CHI SQUARE - COMBINING P-VALUES 
 func_pval.chisq <- function(pvals){
   x <- -2*sum(log(as.numeric(pvals)))
   combined.pval <-  pnorm(x, 2*length(pvals))
 }
+```
+```{r func_combinedpval}
+#FUNCTION: COMBINE THE P-VALUES INTO TABLE 
+func_combinedpval <- function(it.1, it.2, it.3){
+pvals.matrix <- cbind(  as.numeric(it.1[4,])
+                      , as.numeric(it.2[4,])
+                      , as.numeric(it.3[4,])
+)
+#pvals.matrix <- matrix(1, nrow=dim(pvals.matrix)[1], ncol=dim(pvals.matrix)[2]) - pvals.matrix 
 
-pvals.vec <- cbind(it.1[4,], pval.2 <- it.2[4,], pval.3 <- it.3[4,])
-
-combined <- apply(pvals.vec, 2, func_pval.chisq)
+combined <- apply(pvals.matrix, 2, func_pval.chisq)
 combined.pvals <- rbind(it.vec, decimal(combined, dec))
 rownames(combined.pvals) <- c("Iterations", "Combined p-value")
 
 title <- paste("Combined p-values:","$X = -2\\sum_{i=1}^4(p_i) \\sim \\chi^2_{df=8}$")
 combined.pvals 
-#knitr::kable(combined.pvals, booktabs=T, 'latex', caption=title) %>%
-#  kableExtra::kable_styling(latex_options="hold_position" )
+}
+```
+```{r func_alltogethernow}
+func_alltogheternow <- function(it.vec, parameters){
 
+it1 <- func_delinq(it.vec[1])
+it2 <- func_delinq(it.vec[2])
+it3 <- func_delinq(it.vec[3])
+
+table1 <- func_table(1, "Oldest", it1, it2, it3)
+table2 <- func_table(2, "In-Between", it1, it2, it3)
+table3 <- func_table(3, "Youngest", it1, it2, it3)
+table4 <- func_table(4, "Only", it1, it2, it3)
+comb.pval <- func_combinedpval(it1, it2, it3)
+return(list(table1, table2, table3, table4, comb.pval))
+}
 ```
 
-There is evidence that birth order has an effect on delinquency rates.  There may be an argument that younger brothers are more delinquent, but my younger brother is not a delinquent (anecdotal evidence!).  
+
+## Parameters are Counts 
+```{r Counts}
+it.vec <- c(1e04, 1e05, 1e06)
+alpha <-  c(127, 123, 93, 17) #most delinquent
+gamma <-  c(345, 209, 158, 65)  #least delinquent
+parameters <- rbind(alpha, gamma)
+func_tableparam(parameters, "Counts")
+func_alltogheternow(it.vec, parameters)
+```
+
+\newpage 
+## Parameters are Row Proportions 
+```{r RowProp}
+it.vec <- c(1e04, 1e05, 1e06)
+alpha <-  c(127, 123,  93, 17) /360 #most delinquent
+gamma <-  c(345, 209, 158, 65)/777  #least delinquent
+parameters <- rbind(alpha, gamma)
+func_tableparam(parameters, "Row Proportions")
+func_alltogheternow(it.vec, parameters)
+```
+
+\newpage 
+## Parameters are Normalized (Row Proportions/2 - so some of all prop = 1) 
+```{r Normalized}
+it.vec <- c(1e04, 1e05, 1e06)
+alpha <- .5* c(127, 123,  93, 17) /360 #most delinquent
+gamma <- .5 * c(345, 209, 158, 65) /777 #least delinquent
+parameters <- rbind(alpha, gamma)
+func_tableparam(parameters, "Normalized")
+func_alltogheternow(it.vec, parameters)
+```
+
 
 
