@@ -95,7 +95,7 @@ table
 #FUNCTION: CHI SQUARE - COMBINING P-VALUES 
 func_pval.chisq <- function(pvals){
   x <- -2*sum(log(as.numeric(pvals)))
-  combined.pval <-  pnorm(x, 2*length(pvals))
+  combined.pval <-  pchisq(x, 2*length(pvals))
 }
 ```
 ```{r func_combinedpval}
@@ -138,8 +138,10 @@ it.vec <- c(1e04, 1e05, 1e06)
 alpha <-  c(127, 123, 93, 17) #most delinquent
 gamma <-  c(345, 209, 158, 65)  #least delinquent
 parameters <- rbind(alpha, gamma)
+chisq.test(parameters)
 func_tableparam(parameters, "Counts")
 func_alltogheternow(it.vec, parameters)
+
 ```
 
 \newpage 
