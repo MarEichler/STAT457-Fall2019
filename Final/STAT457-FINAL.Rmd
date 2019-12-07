@@ -11,7 +11,7 @@ header-includes:
 - \usepackage{mathtools}
 - \usepackage{bbm} #for mathbb for numbers
 - \usepackage{amsbsy}
-- \usepackage{caption}
+- \usepackage{caption} #to remove automatic table name and number - \captionsetup[table]{labelformat=empty}, put code under YAML
 - \usepackage{booktabs}
 - \usepackage{geometry}
 - \usepackage{float} #to hold things in place
@@ -26,6 +26,7 @@ header-includes:
 geometry: "left=0.75in,right=0.75in,top=1.1in,bottom=1in" 
 ---
 
+\captionsetup[table]{labelformat=empty}
 ```{r setup, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
 library(ggplot2) #ggplot
 library(gridExtra) #organize plots
@@ -35,46 +36,186 @@ library(dplyr) #for piping
 knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
 knitr::opts_chunk$set(echo=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
-dec <- 3
+dec <- 5
 #knitr::opts_chunk$set(echo=FALSE) 
 ```
 
 \newpage  
 # Problem 1  
-Recall the genetic linkage model of Section 5.1.  
-
 ## Problem 1a  
-### Problem 1a(1)
-For the data $Y = (125,18,30,34)$, implement the Gibbs sampler algorithm.  Use a flat prior on $\theta$.  
-Plot $\theta^i$ versus iteration $i$.  How long a chain (or chains) did you use?  Did you toss out any initial values?  
+For the data $Y = (125,18,20,34)$, implement the Gibbs sampler algorithm.  Use a flat prior on $\theta$.  
+Plot $\theta^i$ versus iteration $i$. 
+$Y = (y_1, y_2, y_3, y_4) \propto (2 + \theta, 1 - \theta, 1 - \theta, \theta)$  
+1. Draw a starting value, $t \sim$Uniform(0,1)  
+2. Draw a latent value, $Z \sim \text{Binomial}\left( y_1, \ \frac{ \theta}{2 + \theta} \right)$  
+3. Draw a parameter, $\theta \sim \text{Beta}( Z+y_4 + 1, y_2 + y_3 + 1)$  
 
-### Problem 1a(2)
-Compute the posterior mean and posterior variance based on your chain.  
+```{r func_chain}
+func_chain <-function(startseed, Y){
+  set.seed(startseed)
+  t <- runif(1)
+  theta <- t
+  chain<- c()#rep(NA, 10000)
+  chain[1]<-theta
+  Z.i<-rbinom(1,Y[1],(theta/(theta+2)))
+  theta.i<-rbeta(1,Z.i+Y[4]+1,Y[2]+Y[3]+1)
+  chain[2]<-theta.i
+  Z.i<-rbinom(1,Y[1],(theta.i/(theta.i+2)))
+  theta.i<-rbeta(1,Z.i+Y[1]+1,Y[2]+Y[3]+1)
+  chain[3]<-theta.i
+  k<-3
+    while(abs(chain[k]-chain[k-1]) >= 0.000001) {
+      Z.i<-rbinom(1,Y[1], (theta.i/(theta.i+2)))
+      theta.i<-rbeta(1,Z.i+Y[4]+1,Y[2]+Y[3]+1)
+      k<-k+1
+      chain[k]<-theta.i
+    }
+  chain<-chain[!is.na(chain)]
+  chain
+}
+```
 
-### Problem 1a(3)
-Plot the estimated observed posterior along with the normalized likelihood.  
+```{r scale_funcs}
+func_scalelike<-function(x,y1,y2,y3,y4){
+  like <-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
+  like.max<-max(like)
+  like/like.max #normalized likelihood (on scale from 0 to 1) 
+}
 
-### Problem 1a(4)
-Discuss the adequacy of the estimate.  
+func_scalenormal<-function(x, mean, sd){
+  scales::rescale(dnorm(x, mean, sd), to=c(0, 1)) #normal (on scale from 0 to 1) 
+}
+```
 
+```{r func_p1AB}
+func_problem1AB <- function(startseed, Y, number){
+
+chain <- func_chain(startseed, Y)
+  
+df.chain <- data.frame(
+        "theta.i" = chain,
+        "i"=c(1:length(chain))
+)
+
+chain.mu <- mean(chain)
+chain.sd <- sd(chain)
+table <- data.frame(
+  "Name" = c("Mean", "SD", "it", "Start"),
+  "Value" = c(
+    decimal(chain.mu, dec), 
+    decimal(chain.sd, dec), 
+    decimal(length(chain), 0),
+    decimal(chain[1], dec)
+  )
+)
+tg <- tableGrob(table)
+
+print.Y <- paste(Y, collapse = ",")
+
+#plot theta_i versus i (iterations)
+plot.Gibbs <- ggplot(df.chain, aes(x=i, y=theta.i))+
+  geom_line(alpha=0.4)+
+  ggtitle("Gibbs Sampler")
+
+
+colors <- c("navy", "maroon")
+norm.like <-stat_function(
+  fun = func_scalelike
+  , args = list(y1=Y[1], y2=Y[2], y3=Y[3], y4=Y[4])
+  , lwd = 1
+  , linetype="solid"
+  , aes(col="Normalized Like.")
+  )
+normal.approx <-stat_function(
+  fun = func_scalenormal
+  , args = list(mean=chain.mu, sd=chain.sd)
+  , lwd = 1.5
+  , linetype="dotted"
+  , aes(col="Normal Approx."))
+
+name <- paste("Normal Likelihood and Normal Approx")
+
+#print normalized likelihoods 
+x <- seq(0, 1, 0.001)
+df.x <- data.frame("X"=x)
+plot.Like <-  ggplot(data=df.x, aes(x=X))+
+  norm.like+normal.approx+
+  ggtitle(paste(name))+
+  theme(  axis.title.x = element_blank()
+         ,axis.title.y = element_blank()
+         ,axis.text.x = element_blank()
+         ,axis.text.y = element_blank()
+        )+
+  scale_colour_manual("", values = c(colors[1], colors[2])) +
+  theme(legend.position = c(.2,.9))
+
+main <- paste("Chain", number, "for data for Y=(", print.Y, ")")
+
+gs <- list(plot.Gibbs, tg, plot.Like)
+grid.arrange(grobs=gs, nrow=1, widths=c(2, 1, 2),
+             top = textGrob(main, vjust = 1, gp = gpar(fontface = "bold", cex = 1.2))
+            )
+}
+```
+
+```{r problem1A, fig.height=2}
+Y.A <- c(125, 18, 20, 34)
+
+func_problem1AB(111, Y.A, 1)
+func_problem1AB(112, Y.A, 2)
+func_problem1AB(113, Y.A, 3)
+func_problem1AB(114, Y.A, 4)
+func_problem1AB(115, Y.A, 5)
+```
+
+\newpage 
 ## Problem 1b  
 Repeat 1a for $Y = (14, 0, 1, 5)$.  
+```{r problem1B, fig.height=2}
+Y.B <- c(14,0,1,5)
 
-## Problem 1c  
+func_problem1AB(121, Y.B, 1)
+func_problem1AB(122, Y.B, 2)
+func_problem1AB(123, Y.B, 3)
+func_problem1AB(124, Y.B, 4)
+func_problem1AB(125, Y.B, 5)
+```
+There is a lack of fit for the data in 1b, where the fit appears to be better for data in 1a. Convergence was assessed when values were had a difference less than $10^{-7}$.   
 
-### Problem 1c(1)  
-Run 20 chains with independent starting values.  Compute the average of the $\theta$'s in each chain.  
+\newpage
+## Problem 1c   
+```{r func_chaininfo}
+func_chaininfo <- function(startseed, Y){
+chain <- func_chain(startseed, Y)
+it <- length(chain)
+chain.mu <- mean(chain)
+chain.sd <- sd(chain)
+chain.se <- chain.sd/sqrt(it)
+vec <-c(chain.mu, chain.sd, chain.se, it)
+return(vec)
+}
+```
 
-### Problem 1c(2)  
-Calculate the standard deviation of the 20 averages.  Interpret this value.  
+```{r problem1c-20chains}
+Y.C <- c(125, 18, 20, 34)
+print.Y.C <- paste(Y.C, collapse=",")
+cnames <- c("Mean", "Standard Deviation", "Standard Error", "Iterations")
+info.20chain <- mapply(func_chaininfo, startseed=c(1:20), Y=rep(list(Y.C), 20))
+info.20chain <- t(info.20chain)
+colnames(info.20chain) <- cnames
 
-### Problem 1c(3)  
-Compute the standard deviation of the $\theta$'s in each chain.  
-Divide each SD by the square root of the number of iterations.  Average these "standard errors". 
+knitr::kable(info.20chain, align='rrrr', digits=dec, caption=paste("20 Chains for Y=(", print.Y.C, ")"))
+```
 
-### Problem 1c(4)
-Compare the values in 1c(2) and 1c(3).  
-Would you expect these numbers to be similar or different?  
+```{r problem1c-avgsd.vs.se}
+sd.of.avgs <- sd(info.20chain[,1])
+avg.of.se <- mean(info.20chain[,3])
+
+paste(round(sd.of.avgs, dec+1), "is the standard deviation of the 20 averages of theta")
+paste(decimal(avg.of.se, dec+1), "is the average of the standard errors of the 20 chains of theta")
+```
+
+You would expected these values to be similar but it appears that our standard error average is under-estimating the variation in the chain means of $\theta$ in this case.  
 
 # Problem 2  
 
