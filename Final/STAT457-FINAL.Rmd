@@ -158,7 +158,7 @@ grid.arrange(grobs=gs, nrow=1, widths=c(2, 1, 2),
 }
 ```
 
-```{r p1a, fig.height=2, eval=FALSE}
+```{r p1aRESULT, fig.height=2}
 Y.A <- c(125, 18, 20, 34)
 
 func_problem1AB(111, Y.A, 1)
@@ -171,7 +171,7 @@ func_problem1AB(115, Y.A, 5)
 \newpage 
 ## Problem 1b  
 Repeat 1a for $Y = (14, 0, 1, 5)$.  
-```{r p1b, fig.height=2, eval=FALSE}
+```{r p1bRESULT, fig.height=2}
 Y.B <- c(14,0,1,5)
 
 func_problem1AB(121, Y.B, 1)
@@ -196,7 +196,7 @@ return(vec)
 }
 ```
 
-```{r p1c-20chains, eval=FALSE}
+```{r p1cRESULT20chains}
 Y.C <- c(125, 18, 20, 34)
 print.Y.C <- paste(Y.C, collapse=",")
 cnames <- c("Mean", "Standard Deviation", "Standard Error", "Iterations")
@@ -207,7 +207,7 @@ colnames(info.20chain) <- cnames
 knitr::kable(info.20chain, align='rrrr', digits=dec, caption=paste("20 Chains for Y=(", print.Y.C, ")"))
 ```
 
-```{r p1c-avgsd.vs.se, eval=FALSE}
+```{r p1cRESULTavgsd.vs.se}
 sd.of.avgs <- sd(info.20chain[,1])
 avg.of.se <- mean(info.20chain[,3])
 
@@ -238,7 +238,8 @@ m <- 10
 theta.i <- 0.1
 Y <- c(125, 18, 20, 34)
 
-func_Metropolis <- function(startseed, m, Y, driver){
+func_MetroFix <- function(startseed, m, Y, driver){
+  #fixed driver 
   set.seed(startseed)
   theta.i <- runif(1)
   chain <- c()
@@ -255,21 +256,38 @@ func_Metropolis <- function(startseed, m, Y, driver){
   chain
 }
 
+func_MetroDyn <- function(startseed, m, Y, driver){
+  #dynamic driver 
+  set.seed(startseed)
+  theta.i <- runif(1)
+  chain <- c()
+  alpha <- c()
+  chain[1] <- theta.i
+  for (k in 2:m){
+    theta.j <- driver(1, theta.i)
+    alpha.ij <- min(c(1, func_pi(theta.j, Y)/func_pi(theta.i, Y)))
+    if (theta.j >1 | theta.j <0){alpha.ij <- 0}
+    u <- runif(1)
+    if( u < alpha.ij){theta.i <- theta.j}
+    chain[k] <- theta.i
+  }
+  chain
+}
+
 func_driver1.Uniform <-    function(n){runif(n, min=0, max=1) }
-func_driver2.Norm.sd.01 <- function(n){rnorm(n, mean=theta.i, sd=0.01)}
-func_driver3.Norm.sd.1 <-  function(n){rnorm(n, mean=theta.i, sd=0.1)}
-func_driver4.Norm.sd.5 <-  function(n){rnorm(n, mean=theta.i, sd=0.5)}
+func_driver2.Norm.sd.01 <- function(n, mu){rnorm(n, mean=mu, sd=0.01)}
+func_driver3.Norm.sd.1 <-  function(n, mu){rnorm(n, mean=mu, sd=0.1)}
+func_driver4.Norm.sd.5 <-  function(n, mu){rnorm(n, mean=mu, sd=0.5)}
 func_driver5.Norm.mu.4sd.5 <-  function(n){rnorm(n, mean=0.4, sd=0.5)}
 ```
 
+
 ```{r p2.func_p2ABC}
-func_problem2ABC <- function(startseed, m, Y, driver, driver.name){
+func_problem2ABC <- function(chain, driver.name){
 #main title
 print.Y <- paste(Y, collapse=",")
 main <- paste("Metropolis for data Y=(", print.Y, ") using the driver", driver.name)
 
-#get chain and make dataframe 
-chain <- func_Metropolis(startseed, m, Y, driver)
 df <- data.frame(
          "theta.i"=chain
         ,"i"=c(1:length(chain))
@@ -300,27 +318,27 @@ grid.arrange(plot, tg, widths=c(4,1)
 }
 ```
 
-```{r p2a, fig.height=2, eval=FALSE}
+```{r p2aRESULT, fig.height=2}
 Y.A <- c(125, 18, 20, 34)
 
-func_problem2ABC(211, 10000, Y.A, func_driver1.Uniform, "Uniform(0,1)")
-func_problem2ABC(212, 10000, Y.A, func_driver2.Norm.sd.01,   "Normal(theta.i, 0.01)")
-func_problem2ABC(213, 10000, Y.A, func_driver3.Norm.sd.1,    "Normal(theta.i, 0.10)")
-func_problem2ABC(214, 10000, Y.A, func_driver4.Norm.sd.5,    "Normal(theta.i, 0.50)")
-func_problem2ABC(215, 10000, Y.A, func_driver5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+func_problem2ABC(func_MetroFix(211, 10000, Y.A, func_driver1.Uniform), "Uniform(0,1)")
+func_problem2ABC(func_MetroDyn(212, 10000, Y.A, func_driver2.Norm.sd.01),   "Normal(theta.i, 0.01)")
+func_problem2ABC(func_MetroDyn(213, 10000, Y.A, func_driver3.Norm.sd.1 ),   "Normal(theta.i, 0.10)")
+func_problem2ABC(func_MetroDyn(214, 10000, Y.A, func_driver4.Norm.sd.5 ),   "Normal(theta.i, 0.50)")
+func_problem2ABC(func_MetroFix(215, 10000, Y.A, func_driver5.Norm.mu.4sd.5),"Normal(0.40, 0.10)")
 ```
 
 \newpage  
 ## Problem 2b  
 Repeat 2a for $Y = (14, 0, 1, 5)$  
-```{r p2b, fig.height=2, eval=FALSE}
+```{r p2bRESULT, fig.height=2}
 Y.B <- c(14, 0, 1, 5)
 
-func_problem2ABC(221, 10000, Y.B, func_driver1.Uniform, "Uniform(0,1)")
-func_problem2ABC(222, 10000, Y.B, func_driver2.Norm.sd.01,   "Normal(theta.i, 0.01)")
-func_problem2ABC(223, 10000, Y.B, func_driver3.Norm.sd.1,    "Normal(theta.i, 0.10)")
-func_problem2ABC(224, 10000, Y.B, func_driver4.Norm.sd.5,    "Normal(theta.i, 0.50)")
-func_problem2ABC(225, 10000, Y.B, func_driver5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+func_problem2ABC(func_MetroFix(221, 10000, Y.B, func_driver1.Uniform), "Uniform(0,1)")
+func_problem2ABC(func_MetroDyn(222, 10000, Y.B, func_driver2.Norm.sd.01),   "Normal(theta.i, 0.01)")
+func_problem2ABC(func_MetroDyn(223, 10000, Y.B, func_driver3.Norm.sd.1 ),   "Normal(theta.i, 0.10)")
+func_problem2ABC(func_MetroDyn(224, 10000, Y.B, func_driver4.Norm.sd.5 ),   "Normal(theta.i, 0.50)")
+func_problem2ABC(func_MetroFix(225, 10000, Y.B, func_driver5.Norm.mu.4sd.5),"Normal(0.40, 0.10)")
 ```
 
 ## Problem 2c  
@@ -333,8 +351,8 @@ In problem 1 the means were similar, but in problem 2 the means vary depending o
 ## Problem 2d  
 
 ```{r p2.func_Metroinfo}
-func_Metroinfo <- function(startseed, m, Y, driver){
-chain <- func_Metropolis(startseed, m, Y, driver)
+func_Metroinfo <- function(startseed, m, Y, driver, metro.func){
+chain <- metro.func(startseed, m, Y, driver)
 it <- length(chain)
 chain.mu <- mean(chain)
 chain.sd <- sd(chain)
@@ -345,14 +363,15 @@ return(vec)
 ```
 
 ```{r p2.func_20chains}
-func_20metrochains <- function(Y, driver, start){
+func_20metrochains <- function(Y, driver, metro.func){
 print.Y <- paste(Y, collapse=",")
 cnames <- c("Mean", "SD", "SE")
 info.20chain <- mapply( func_Metroinfo
-                       , startseed=c(start:(start+19))
+                       , startseed=c(1:20)
                        , m =rep(10000, 20)
                        , Y=rep(list(Y), 20)
-                       , driver=rep(list(func_driver1.Uniform), 20)
+                       , driver=rep(list(driver), 20)
+                       , metro.func=rep(list(metro.func), 20)
                       )
 info.20chain <- t(info.20chain)
 colnames(info.20chain) <- cnames
@@ -360,14 +379,14 @@ info.20chain
 }
 ```
 
-```{r p2d.20chains}
+```{r p2dRESULT20chains}
 Y.D <- c(125, 18, 20, 34)
 
-d1 <- func_20metrochains(Y.D, func_driver1.Uniform, 10)
-d2 <- func_20metrochains(Y.D, func_driver2.Norm.sd.01, 20)
-d3 <- func_20metrochains(Y.D, func_driver3.Norm.sd.1, 30)
-d4 <- func_20metrochains(Y.D, func_driver4.Norm.sd.5, 40)
-d5 <- func_20metrochains(Y.D, func_driver5.Norm.mu.4sd.5, 50)
+d1 <- func_20metrochains(Y.D, func_driver1.Uniform,      func_MetroFix)
+d2 <- func_20metrochains(Y.D, func_driver2.Norm.sd.01,    func_MetroDyn)
+d3 <- func_20metrochains(Y.D, func_driver3.Norm.sd.1,     func_MetroDyn)
+d4 <- func_20metrochains(Y.D, func_driver4.Norm.sd.5,     func_MetroDyn)
+d5 <- func_20metrochains(Y.D, func_driver5.Norm.mu.4sd.5, func_MetroFix)
 
 table2d <- cbind(d1, d2, d3, d4, d5)
 
@@ -385,11 +404,7 @@ knitr::kable(table2d, digits=4, booktabs=TRUE, 'latex'
                                 ))
 ```
 
-
-
-
-
-```{r p2d-avgsd.vs.se}
+```{r p2dRESULTavgsd.vs.se}
 sd.of.avgs <- c(
    sd(table2d[,1])
   ,sd(table2d[,4])
