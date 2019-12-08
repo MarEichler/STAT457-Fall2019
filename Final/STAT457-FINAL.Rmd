@@ -50,7 +50,7 @@ $Y = (y_1, y_2, y_3, y_4) \propto (2 + \theta, 1 - \theta, 1 - \theta, \theta)$
 2. Draw a latent value, $Z \sim \text{Binomial}\left( y_1, \ \frac{ \theta}{2 + \theta} \right)$  
 3. Draw a parameter, $\theta \sim \text{Beta}( Z+y_4 + 1, y_2 + y_3 + 1)$  
 
-```{r func_chain}
+```{r p1.func_chain}
 func_chain <-function(startseed, Y){
   set.seed(startseed)
   t <- runif(1)
@@ -75,7 +75,7 @@ func_chain <-function(startseed, Y){
 }
 ```
 
-```{r scale_funcs}
+```{r p1.scale_funcs}
 func_scalelike<-function(x,y1,y2,y3,y4){
   like <-(2+x)^y1*(1-x)^(y2+y3)*(x)^y4
   like.max<-max(like)
@@ -87,7 +87,7 @@ func_scalenormal<-function(x, mean, sd){
 }
 ```
 
-```{r func_p1AB}
+```{r p1.func_p1AB}
 func_problem1AB <- function(startseed, Y, number){
 
 chain <- func_chain(startseed, Y)
@@ -153,12 +153,12 @@ main <- paste("Chain", number, "for data for Y=(", print.Y, ")")
 
 gs <- list(plot.Gibbs, tg, plot.Like)
 grid.arrange(grobs=gs, nrow=1, widths=c(2, 1, 2),
-             top = textGrob(main, vjust = 1, gp = gpar(fontface = "bold", cex = 1.2))
+             top = textGrob(main, vjust = .5, gp = gpar(fontface = "bold", cex = 1.2))
             )
 }
 ```
 
-```{r problem1A, fig.height=2}
+```{r p1a, fig.height=2, eval=FALSE}
 Y.A <- c(125, 18, 20, 34)
 
 func_problem1AB(111, Y.A, 1)
@@ -171,7 +171,7 @@ func_problem1AB(115, Y.A, 5)
 \newpage 
 ## Problem 1b  
 Repeat 1a for $Y = (14, 0, 1, 5)$.  
-```{r problem1B, fig.height=2}
+```{r p1b, fig.height=2, eval=FALSE}
 Y.B <- c(14,0,1,5)
 
 func_problem1AB(121, Y.B, 1)
@@ -184,7 +184,7 @@ There is a lack of fit for the data in 1b, where the fit appears to be better fo
 
 \newpage
 ## Problem 1c   
-```{r func_chaininfo}
+```{r p1.func_chaininfo}
 func_chaininfo <- function(startseed, Y){
 chain <- func_chain(startseed, Y)
 it <- length(chain)
@@ -196,7 +196,7 @@ return(vec)
 }
 ```
 
-```{r problem1c-20chains}
+```{r p1c-20chains, eval=FALSE}
 Y.C <- c(125, 18, 20, 34)
 print.Y.C <- paste(Y.C, collapse=",")
 cnames <- c("Mean", "Standard Deviation", "Standard Error", "Iterations")
@@ -207,7 +207,7 @@ colnames(info.20chain) <- cnames
 knitr::kable(info.20chain, align='rrrr', digits=dec, caption=paste("20 Chains for Y=(", print.Y.C, ")"))
 ```
 
-```{r problem1c-avgsd.vs.se}
+```{r p1c-avgsd.vs.se, eval=FALSE}
 sd.of.avgs <- sd(info.20chain[,1])
 avg.of.se <- mean(info.20chain[,3])
 
@@ -217,6 +217,8 @@ paste(decimal(avg.of.se, dec+1), "is the average of the standard errors of the 2
 
 You would expected these values to be similar but it appears that our standard error average is under-estimating the variation in the chain means of $\theta$ in this case.  
 
+
+\newpage  
 # Problem 2  
 
 ## Problem 2a  
@@ -224,22 +226,109 @@ For the genetic linkage model applied to $Y = (125, 18, 20, 34)$, implement the 
 (use a flat prior on $\theta)$.  Use one long chain and plot $\theta^i$ versus $i$.  
 Try several driver functions: 
 
-### Problem 2a(1) - Uniform on (0,1)  
-  
-### Problem 2a(2) - Normal Centered at the Current Point of the Chain and sd = 0.01
-  
-### Problem 2a(3) - Normal Centered at the Current Point of the Chain and sd = 0.1
-  
-### Problem 2a(4) - Normal Centered at the Current Point of the Chain and sd = 0.5
-  
-### Problem 2a(5) - Normal Centered at 0.4 and sd = 0.1
+```{r func_pi,func_Metropolis,func_drivers}
+func_pi <- function(theta, Y){
+  (2+theta)^(Y[1]) * (1 - theta)^(Y[2]+Y[3]) * (theta)^(Y[4])
+}
 
+m <- 10
+
+#theta.i = X (old value)
+#theta.j = Y (new value) 
+theta.i <- 0.1
+Y <- c(125, 18, 20, 34)
+
+func_Metropolis <- function(startseed, m, Y, driver){
+  set.seed(startseed)
+  theta.i <- runif(1)
+  chain <- c()
+  alpha <- c()
+  chain[1] <- theta.i
+  for (k in 2:m){
+    theta.j <- driver(1)
+    alpha.ij <- min(c(1, func_pi(theta.j, Y)/func_pi(theta.i, Y)))
+    if (theta.j >1 | theta.j <0){alpha.ij <- 0}
+    u <- runif(1)
+    if( u < alpha.ij){theta.i <- theta.j}
+    chain[k] <- theta.i
+  }
+  chain
+}
+
+func_driver2a1.Uniform <-    function(n){runif(n, min=0, max=1) }
+func_driver2a2.Norm.sd.01 <- function(n){rnorm(n, mean=theta.i, sd=0.01)}
+func_driver2a3.Norm.sd.1 <-  function(n){rnorm(n, mean=theta.i, sd=0.1)}
+func_driver2a4.Norm.sd.5 <-  function(n){rnorm(n, mean=theta.i, sd=0.5)}
+func_driver2a5.Norm.mu.4sd.5 <-  function(n){rnorm(n, mean=0.4, sd=0.5)}
+```
+
+```{r func_p2ABC}
+func_problem2ABC <- function(startseed, m, Y, driver, driver.name){
+#main title
+print.Y <- paste(Y, collapse=",")
+main <- paste("Metropolis for data Y=(", print.Y, ") using the driver", driver.name)
+
+#get chain and make dataframe 
+chain <- func_Metropolis(startseed, m, Y, driver)
+df <- data.frame(
+         "theta.i"=chain
+        ,"i"=c(1:length(chain))
+)
+
+
+#table grob
+chain.mu <- mean(chain)
+chain.sd <- sd(chain)
+table <- data.frame(
+  "Name" = c("Mean", "SD", "it", "Start"),
+  "Value" = c(
+    decimal(chain.mu, dec), 
+    decimal(chain.sd, dec), 
+    decimal(length(chain), 0),
+    decimal(chain[1], dec)
+  )
+)
+tg <- tableGrob(table)
+
+#plot theta_i versus i (iterations)
+plot <- ggplot(df, aes(x=i, y=theta.i))+
+  geom_line(alpha=0.4)
+
+grid.arrange(plot, tg, widths=c(4,1)
+             ,top = textGrob(main, vjust = .5, gp = gpar(fontface = "bold", cex = 1.1))
+                             )
+}
+```
+
+```{r p2a, fig.height=2 }
+Y.A <- c(125, 18, 20, 34)
+
+func_problem2ABC(211, 10000, Y.A, func_driver2a1.Uniform, "Uniform(0,1)")
+func_problem2ABC(212, 10000, Y.A, func_driver2a2.Norm.sd.01,   "Normal(theta.i, 0.01)")
+func_problem2ABC(213, 10000, Y.A, func_driver2a3.Norm.sd.1,    "Normal(theta.i, 0.10)")
+func_problem2ABC(214, 10000, Y.A, func_driver2a4.Norm.sd.5,    "Normal(theta.i, 0.50)")
+func_problem2ABC(215, 10000, Y.A, func_driver2a5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+```
+
+\newpage  
 ## Problem 2b  
-Repeat 2a for $Y = (14, 0, 1, 5)$ 
+Repeat 2a for $Y = (14, 0, 1, 5)$  
+
+```{r p2b, fig.height=2 }
+Y.B <- c(14, 0, 1, 5)
+
+func_problem2ABC(221, 10000, Y.B, func_driver2a1.Uniform, "Uniform(0,1)")
+func_problem2ABC(222, 10000, Y.B, func_driver2a2.Norm.sd.01,   "Normal(theta.i, 0.01)")
+func_problem2ABC(223, 10000, Y.B, func_driver2a3.Norm.sd.1,    "Normal(theta.i, 0.10)")
+func_problem2ABC(224, 10000, Y.B, func_driver2a4.Norm.sd.5,    "Normal(theta.i, 0.50)")
+func_problem2ABC(225, 10000, Y.B, func_driver2a5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+```
 
 ## Problem 2c  
 Compute both the posterior mean and standard deviation for both data sets.  
 Compare to results from the previous problem.  
+
+In problem 1 the means were similar, but in problem 2 the means vary depending on the driver.  Some of the means in problem 2 are close to the means in problem 1.  
 
 ## Problem 2d  
 
