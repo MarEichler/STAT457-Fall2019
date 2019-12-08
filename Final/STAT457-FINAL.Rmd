@@ -226,7 +226,7 @@ For the genetic linkage model applied to $Y = (125, 18, 20, 34)$, implement the 
 (use a flat prior on $\theta)$.  Use one long chain and plot $\theta^i$ versus $i$.  
 Try several driver functions: 
 
-```{r func_pi,func_Metropolis,func_drivers}
+```{r p2.func_pi,func_Metropolis,func_drivers}
 func_pi <- function(theta, Y){
   (2+theta)^(Y[1]) * (1 - theta)^(Y[2]+Y[3]) * (theta)^(Y[4])
 }
@@ -255,14 +255,14 @@ func_Metropolis <- function(startseed, m, Y, driver){
   chain
 }
 
-func_driver2a1.Uniform <-    function(n){runif(n, min=0, max=1) }
-func_driver2a2.Norm.sd.01 <- function(n){rnorm(n, mean=theta.i, sd=0.01)}
-func_driver2a3.Norm.sd.1 <-  function(n){rnorm(n, mean=theta.i, sd=0.1)}
-func_driver2a4.Norm.sd.5 <-  function(n){rnorm(n, mean=theta.i, sd=0.5)}
-func_driver2a5.Norm.mu.4sd.5 <-  function(n){rnorm(n, mean=0.4, sd=0.5)}
+func_driver1.Uniform <-    function(n){runif(n, min=0, max=1) }
+func_driver2.Norm.sd.01 <- function(n){rnorm(n, mean=theta.i, sd=0.01)}
+func_driver3.Norm.sd.1 <-  function(n){rnorm(n, mean=theta.i, sd=0.1)}
+func_driver4.Norm.sd.5 <-  function(n){rnorm(n, mean=theta.i, sd=0.5)}
+func_driver5.Norm.mu.4sd.5 <-  function(n){rnorm(n, mean=0.4, sd=0.5)}
 ```
 
-```{r func_p2ABC}
+```{r p2.func_p2ABC}
 func_problem2ABC <- function(startseed, m, Y, driver, driver.name){
 #main title
 print.Y <- paste(Y, collapse=",")
@@ -300,28 +300,27 @@ grid.arrange(plot, tg, widths=c(4,1)
 }
 ```
 
-```{r p2a, fig.height=2 }
+```{r p2a, fig.height=2, eval=FALSE}
 Y.A <- c(125, 18, 20, 34)
 
-func_problem2ABC(211, 10000, Y.A, func_driver2a1.Uniform, "Uniform(0,1)")
-func_problem2ABC(212, 10000, Y.A, func_driver2a2.Norm.sd.01,   "Normal(theta.i, 0.01)")
-func_problem2ABC(213, 10000, Y.A, func_driver2a3.Norm.sd.1,    "Normal(theta.i, 0.10)")
-func_problem2ABC(214, 10000, Y.A, func_driver2a4.Norm.sd.5,    "Normal(theta.i, 0.50)")
-func_problem2ABC(215, 10000, Y.A, func_driver2a5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+func_problem2ABC(211, 10000, Y.A, func_driver1.Uniform, "Uniform(0,1)")
+func_problem2ABC(212, 10000, Y.A, func_driver2.Norm.sd.01,   "Normal(theta.i, 0.01)")
+func_problem2ABC(213, 10000, Y.A, func_driver3.Norm.sd.1,    "Normal(theta.i, 0.10)")
+func_problem2ABC(214, 10000, Y.A, func_driver4.Norm.sd.5,    "Normal(theta.i, 0.50)")
+func_problem2ABC(215, 10000, Y.A, func_driver5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
 ```
 
 \newpage  
 ## Problem 2b  
 Repeat 2a for $Y = (14, 0, 1, 5)$  
-
-```{r p2b, fig.height=2 }
+```{r p2b, fig.height=2, eval=FALSE}
 Y.B <- c(14, 0, 1, 5)
 
-func_problem2ABC(221, 10000, Y.B, func_driver2a1.Uniform, "Uniform(0,1)")
-func_problem2ABC(222, 10000, Y.B, func_driver2a2.Norm.sd.01,   "Normal(theta.i, 0.01)")
-func_problem2ABC(223, 10000, Y.B, func_driver2a3.Norm.sd.1,    "Normal(theta.i, 0.10)")
-func_problem2ABC(224, 10000, Y.B, func_driver2a4.Norm.sd.5,    "Normal(theta.i, 0.50)")
-func_problem2ABC(225, 10000, Y.B, func_driver2a5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
+func_problem2ABC(221, 10000, Y.B, func_driver1.Uniform, "Uniform(0,1)")
+func_problem2ABC(222, 10000, Y.B, func_driver2.Norm.sd.01,   "Normal(theta.i, 0.01)")
+func_problem2ABC(223, 10000, Y.B, func_driver3.Norm.sd.1,    "Normal(theta.i, 0.10)")
+func_problem2ABC(224, 10000, Y.B, func_driver4.Norm.sd.5,    "Normal(theta.i, 0.50)")
+func_problem2ABC(225, 10000, Y.B, func_driver5.Norm.mu.4sd.5,"Normal(0.40, 0.10)")
 ```
 
 ## Problem 2c  
@@ -330,24 +329,105 @@ Compare to results from the previous problem.
 
 In problem 1 the means were similar, but in problem 2 the means vary depending on the driver.  Some of the means in problem 2 are close to the means in problem 1.  
 
+\newpage  
 ## Problem 2d  
 
-### Problem 2d(1)
-For each of the drives in part 2a, run 20 chains with independent starting values.  
-Compute the averages of the $\theta$'s in each chain.  
+```{r p2.func_Metroinfo}
+func_Metroinfo <- function(startseed, m, Y, driver){
+chain <- func_Metropolis(startseed, m, Y, driver)
+it <- length(chain)
+chain.mu <- mean(chain)
+chain.sd <- sd(chain)
+chain.se <- chain.sd/sqrt(it)
+vec <-c(chain.mu, chain.sd, chain.se)
+return(vec)
+}
+```
 
-### Problem 2d(2)  
-Calculate the standard deviation of the 20 averages.  Interpret this value.  
+```{r p2.func_20chains}
+func_20metrochains <- function(Y, driver, start){
+print.Y <- paste(Y, collapse=",")
+cnames <- c("Mean", "SD", "SE")
+info.20chain <- mapply( func_Metroinfo
+                       , startseed=c(start:(start+19))
+                       , m =rep(10000, 20)
+                       , Y=rep(list(Y), 20)
+                       , driver=rep(list(func_driver1.Uniform), 20)
+                      )
+info.20chain <- t(info.20chain)
+colnames(info.20chain) <- cnames
+info.20chain
+}
+```
 
-### Problem 2d(3)  
-Compute the standard deviation of the $\theta$'s in each chain.  Divide each SD by the square root of the number of iterations.  
-Average these "standard errors".  
+```{r p2d.20chains}
+Y.D <- c(125, 18, 20, 34)
 
-### Problem 2d(4) 
-Compare the 2d(2) values to 2d(3).  Would you expect these number to be similar or different?  
-Compare to the results of Exercise 1c.  
+d1 <- func_20metrochains(Y.D, func_driver1.Uniform, 10)
+d2 <- func_20metrochains(Y.D, func_driver2.Norm.sd.01, 20)
+d3 <- func_20metrochains(Y.D, func_driver3.Norm.sd.1, 30)
+d4 <- func_20metrochains(Y.D, func_driver4.Norm.sd.5, 40)
+d5 <- func_20metrochains(Y.D, func_driver5.Norm.mu.4sd.5, 50)
+
+table2d <- cbind(d1, d2, d3, d4, d5)
+
+print.Y.D <- paste(Y.D, collapse=",")
+
+knitr::kable(table2d, digits=4, booktabs=TRUE, 'latex'
+             , caption=paste("20 Chains for Y=(",print.Y.D, ") with Different Drivers")
+             ) %>%
+  kableExtra::kable_styling(latex_options=c("hold_position", "scale_down") ) %>% 
+  kableExtra::add_header_above(c( "Uniform(0, 1)" =3
+                                 ,"Normal(theta.i, 0.01)"=3
+                                 ,"Normal(theta.i, 0.10)"=3
+                                 ,"Normal(theta.i, 0.50"=3
+                                 ,"Normal(0.40, 0.10)"=3
+                                ))
+```
 
 
+
+
+
+```{r p2d-avgsd.vs.se}
+sd.of.avgs <- c(
+   sd(table2d[,1])
+  ,sd(table2d[,4])
+  ,sd(table2d[,7])
+  ,sd(table2d[,10])
+  ,sd(table2d[,13])
+  )
+
+avg.of.se <- c(
+   mean(table2d[,3])
+  ,mean(table2d[,6])
+  ,mean(table2d[,9])
+  ,mean(table2d[,12])
+  ,mean(table2d[,15])
+  )
+
+driver.name <- c(
+  "Uniform(0,1)"
+  ,"Normal(theta.i, 0.01)"
+  ,"Normal(theta.i, 0.10)"
+  ,"Normal(theta.i, 0.50)"
+  ,"Normal(0.40, 0.10)"
+)
+
+
+table2d.sdse <- cbind(sd.of.avgs, avg.of.se)
+rownames(table2d.sdse) <- driver.name
+
+knitr::kable(table2d.sdse, 'latex', booktabs=TRUE
+             , caption=paste("SD of Average theta's versus Average SE")
+             )  %>%
+    kableExtra::kable_styling(latex_options="hold_position")
+```
+
+Similar to problem 1, it appears that our estimation of the variation in the mean of theta is lower than the actual variation between the means.   
+ 
+
+\newpage  
 # Problem 3  
 
 ## Problem 3a  
