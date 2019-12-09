@@ -33,11 +33,13 @@ library(gridExtra) #organize plots
 library(grid) #organize plots
 library(latex2exp) #latex in ggplot titles 
 library(dplyr) #for piping 
+library(MASS)
+library(invgamma)
 knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
 knitr::opts_chunk$set(echo=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
-#knitr::opts_chunk$set(echo=FALSE) 
+knitr::opts_chunk$set(eval=FALSE) 
 ```
 
 \newpage  
@@ -460,59 +462,312 @@ $p(\mu) = \mathcal{N}(\mu_0, \sigma^2_0)$.
 Let $\overline{Y}_i = \frac{1}{J} \sum_{j=1}^J Y_{ij}$ and $\theta = (theta_1, \cdots, \theta_k)$.  
 Show the following: 
 
+$$
+\begin{aligned}
+p(\mu, \sigma^2_\epsilon, \sigma^2_\theta) & = p(\mu) p(\sigma^2_\theta) p(\sigma^2_\epsilon)
+\\
+& = \mathcal{N}(\mu_0, \sigma^2_0) \text{IG}(a_1, b_1) \text{IG}(a_2, b_2)
+\\
+&= \left[
+\frac{1}{\sqrt{2 \pi} \  \sigma_0} \exp \left\{ - \frac{1}{2} \frac{ (\mu - \mu_0)^2}{\sigma_0^2} \right\}
+\right]
+\cdot 
+\left[
+(\sigma^2_\theta)^{a_1 - 1} \exp \left\{ -b_1 \sigma^2_\theta \right\} 
+\right]^{-1}
+\cdot 
+\left[
+(\sigma^2_\epsilon)^{a_2 - 1} \exp \left\{ -b_2 \sigma^2_\epsilon \right\} 
+\right]^{-1}
+\\[0.5ex]
+& \propto   
+\sigma_\theta^{-2(a_1 - 1)} \cdot 
+\sigma_\epsilon^{-2(a_2 - 1)} \cdot 
+\exp \left\{
+-\frac{1}{2} \frac{(\mu - \mu_0)^2}{\sigma_0^2} + b_1 \sigma^2_\theta + b_2 \sigma^2_\epsilon 
+\right\}
+\\[2ex]
+p(\mu, \theta, \sigma^2_\theta, \sigma^2_\epsilon \mid Y) & \propto p(Y \mid \mu, \theta, \sigma^2_\theta, \sigma^2_\epsilon ) \cdot p(\theta \mid \mu, \sigma^2_\theta, \sigma^2_\epsilon) \cdot p( \mu, \sigma^2_\theta, \sigma^2_\epsilon)
+\\
+& = \left[ \prod_{i=1}^K \prod_{j=1}^J \left( p(y_{ij}) \sim \mathcal{N}(\theta_i, \sigma^2_\epsilon) \right) \right]  \cdot 
+\left[ \prod_{i=1}^K \left( p(\theta_i) \sim \mathcal{N}(\mu, \sigma^2_\theta) \right) \right] 
+ \cdot \prod_{i=1}^K p( \mu, \sigma^2_\theta, \sigma^2_\epsilon)
+\\[0.5ex]
+& = \left[ 
+\sigma_\epsilon^{-(KJ)} \cdot \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K \sum_{j=1}^J (y_{ij}  - \theta_i)^2}
+{\sigma^2_\epsilon} \right\} \right] 
+\\[0.5ex]
+& \quad \cdot \left[\sigma_\theta^{-K} \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K (\theta_i - \mu)^2}
+{\sigma^2_\theta } \right\} \right] 
+\\[0.5ex]
+& \quad \cdot \left[ 
+\sigma_\theta^{-2K(a_1 - 1)} \cdot 
+\sigma_\epsilon^{-2K(a_2 - 1)} \cdot 
+\exp \left\{ K \left( 
+-\frac{1}{2} \frac{(\mu - \mu_0)^2}{\sigma_0^2} + b_1 \sigma^2_\theta + b_2 \sigma^2_\epsilon 
+\right) \right\} \right] 
+\end{aligned} 
+$$
+
+\newpage  
 ### Problem 3a(1) 
 $$
+\begin{aligned}
 p(\mu \mid \theta, \sigma^2_{\epsilon}, \sigma^2_{\theta}, Y) 
-= \mathcal{N} \left( 
+&\propto  =  \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K (\theta_i - \mu)^2}
+{\sigma^2_\theta } \right\}  \cdot 
+\exp \left\{ K \left( 
+-\frac{1}{2} \frac{(\mu - \mu_0)^2}{\sigma_0^2} 
+\right) \right\} 
+\\[0.5ex]
+& =  \mathcal{N} \left( 
 \frac{ \sigma_\theta^2 \mu_0 + \sigma_0^2 \sum \theta_i}{\sigma^2_\theta + K \sigma^2_0}
 , \ 
 \frac{ \sigma^2_\theta \sigma^2_0}{\sigma^2_\theta + K \sigma^2_0}
 \right)
+\end{aligned}
 $$
 
 ### Problem 3a(2)  
 $$
-p(\theta_i \mid \mu, \sigma^2_\epsilon, \sigma^2_\theta, Y)
-= \mathcal{N} \left( 
+\begin{aligned}
+p(\theta_i \mid \mu, \sigma^2_\epsilon, \sigma^2_\theta, Y) & \propto 
+\cdot \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K \sum_{j=1}^J (y_{ij}  - \theta_i)^2}
+{\sigma^2_\epsilon} \right\}  \cdot 
+\exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K (\theta_i - \mu)^2}
+{\sigma^2_\theta } \right\} 
+\\[0.5ex]
+& =  \mathcal{N} \left( 
 \frac{J\sigma^2_\theta}{J\sigma^2_\theta + \sigma_\epsilon^2} \cdot \overline{Y}_i
 + 
 \frac{\sigma^2_\epsilon}{J\sigma^2_\theta + \sigma_\epsilon^2} \cdot \mu
 , \ \ \ 
 \frac{\sigma^2_\theta \sigma^2_\epsilon}{J\sigma^2_\theta + \sigma_\epsilon^2}
 \right) 
+\end{aligned}
 $$
 
 ### Problem 3a(3)  
 $$
-p(\sigma^2_\epsilon \mid \mu, \theta, \sigma^2_\theta, Y)  = \text{InverseGamma}
+\begin{aligned}
+p(\sigma^2_\epsilon \mid \mu, \theta, \sigma^2_\theta, Y)   & \propto 
+ = 
+\sigma_\epsilon^{-(KJ)} \cdot \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K \sum_{j=1}^J (y_{ij}  - \theta_i)^2}
+{\sigma^2_\epsilon} \right\}  
+ \cdot 
+\sigma_\epsilon^{-2K(a_2 - 1)} \cdot 
+\exp \left\{ K \left( 
+ b_2 \sigma^2_\epsilon 
+\right) \right\} 
+\\[0.5ex]
+& =\text{IG}
 \left(
 a_2 + \frac{KJ}{2}, \ 
 b_2 + \frac{1}{2} \sum_{i=1}^K \sum_{j=1}^J (Y_{ij} - \theta_i)^2
 \right)
+\end{aligned}
 $$
 
 ### Problem 3a(4) 
 $$
-p(\sigma^2_\theta \mid \mu, \theta, \sigma^2_\epsilon, Y)  = \text{InverseGamma}
+\begin{aligned}
+p(\sigma^2_\theta \mid \mu, \theta, \sigma^2_\epsilon, Y)  & \propto 
+\sigma_\theta^{-K} \exp \left\{ - \frac{1}{2} \frac{\sum_{i=1}^K (\theta_i - \mu)^2}
+{\sigma^2_\theta } \right\} 
+ \cdot  
+\sigma_\theta^{-2K(a_1 - 1)} \cdot 
+\exp \left\{ K \left( 
+ b_1 \sigma^2_\theta 
+\right) \right\} 
+\\[0.5ex]
+& = \text{IG}
 \left(
 a_1 + \frac{K}{2}
 , \ 
 b_1 + \frac{1}{2} \sum_{i=1}^K  (\theta_i - \mu)^2
 \right)
+\end{aligned}
 $$
 
+\newpage  
 ## Problem 3b  
-Run the Gibbs sampler for the data below. 
+Run the Gibbs sampler for the data below.  
+```{r p3b.data, eval=TRUE}
+j1 <- c( 7.298,  3.846,  2.434,  9.566,  7.990)
+j2 <- c( 5.220,  6.556,  0.608, 11.788, -0.892)
+j3 <- c( 0.110, 10.386, 13.434,  5.510,  8.166)
+j4 <- c( 2.212,  4.852,  7.092,  9.288,  4.980)
+j5 <- c( 0.282,  9.014,  4.458,  9.446,  7.198)
+j6 <- c( 1.722,  4.782,  8.106,  0.758,  3.758)
+
+Y <- cbind(j1, j2, j3, j4, j5, j6)
+y_j. <- apply(Y, 2, mean)
+
+rbind(Y, c(rep(" ", 6)), y_j.)
+paste("y_..=", mean(Y))
+
+```
+
 Use one chain of length 75,000.
 Take $p(\mu) =\mathcal{N}(0, 10^{12})$,  $p(\sigma^2_\epsilon) = IG(0, 0)$, and $p(\sigma^2_\theta) = IG(1, 1)$.
 For each $\theta_i$, for $\sigma_\epsilon$, and for $\theta_\theta$, plot the simulated value at iteration $j$ versus $j$.
 Summarize each posterior marginal.  
 
+```{r p3b.func_gibbsdf}
+func_gibbsdf <- function(startseed, it, mu.o, sig2.o, a1, b1, a2, b2, Y){
+set.seed(startseed)
+J <- dim(Y)[2] #ROW, observations
+K <- dim(Y)[1] #COLUMN, group
+Y.col <- apply(Y, 2, mean) #col means
+sig.o <- sqrt(sig2.o)
+chain.mu <- c()
+chain.sig2.0 <- c()
+chain.sig2.e <- c()
+chain.theta <- matrix(0, nrow=it, ncol=K)
+
+#Iteration ONE - STARTING VALUES 
+mu <- rnorm(1, mu.o, sig.o) #generate \mu
+sig2.0 <- rinvgamma(1, a1, b1) #generate \sigma_\theta
+sig2.e <- rinvgamma(1, a2, b2) #generate \sigma_\epsilon 
+theta <- rnorm(K, mu, sqrt(sig2.0)) #generate \theta = (\theta_1, ..., theta_K)
+chain.mu[1] <- mu
+chain.sig2.0[1] <- sig2.0
+chain.sig2.e[1] <- sig2.e
+chain.theta[1,] <- theta 
+
+#ITERATION TWO+ 
+for (l in 2:it){
+  #values for respective distributions 
+  mean.mu <- (sig2.0 * mu.o + sig2.o *sum(theta)) / (sig2.0 + K * sig2.o)
+  sig2.mu <- (sig2.0*sig2.o) / (sig2.0 + K * sig2.o)
+  A.sig2.0 <- a1 + K/2
+  B.sig2.0 <- b1 + .5 * sum((theta - mu)^2)
+  A.sig2.e <- a2 + (K*J)/2
+  B.sig2.e <- b2 + .5 *sum( (Y - matrix(theta, K, J, byrow=TRUE))^2 )
+  mean.theta <- Y.col * (J * sig2.0 )/(J * sig2.0 + sig2.e) + mu * (sig2.e)/(J * sig2.0 + sig2.e)
+  sig2.theta <- (sig2.0 * sig2.e)/(J * sig2.0 + sig2.e)
+  
+  #new values 
+  mu <- rnorm(1, mean.mu, sqrt(sig2.mu))
+  sig2.0 <- rinvgamma(1, A.sig2.0, B.sig2.0)
+  sig2.e <- rinvgamma(1, A.sig2.e, B.sig2.e)
+  theta <- rnorm(K, mean.theta, sqrt(sig2.theta))
+  
+  #put new values into chains
+  chain.mu[l] <- mu
+  chain.sig2.0[l] <- sig2.0
+  chain.sig2.e[l] <- sig2.e
+  chain.theta[l,] <- theta 
+}
+
+df.chain <- data.frame(
+   "iteration"= c(1:it)
+  ,"mu" = chain.mu
+  ,"sig2.theta" = chain.sig2.0
+  ,"sig2.epsilon" = chain.sig2.e
+  ,"theta.1" = chain.theta[,1]
+  ,"theta.2" = chain.theta[,2]
+  ,"theta.3" = chain.theta[,3]
+  ,"theta.4" = chain.theta[,4]
+  ,"theta.5" = chain.theta[,5]
+  ,"theta.6" = chain.theta[,5]
+)
+
+return(df.chain)
+}
+
+```
+
+```{r 3b.func_plotchain}
+func_plotchain <- function(df.chain,throw.out,  c, yval.tex){
+df.chain <- df.chain[throw.out:nrow(df.chain), ] #throw out first _ values
+yval <- df.chain[, c]
+post.mean <- mean(yval)
+xname <- colnames(df.chain)[1]
+ggplot(df.chain, aes(x=iteration, y=df.chain[,c])) + geom_line(alpha=0.4)+
+  ggtitle(TeX(paste(yval.tex ,"versus iteration")))+ ylab(TeX(yval.tex)) + xlab("Iteration")+
+  annotate('text', x=mean(df.chain$iteration), y=Inf, 
+           label=paste("Mean=",decimal(post.mean, dec)), vjust=2, fontface="bold")
+}
+```
+
+```{r p3b.func_problem3b}
+
+func_problem3b <- function(startseed, it, mu.o, sig2.o, a1, b1, a2, b2, Y, throw.out){
+df.chain <- func_gibbsdf(startseed, it, mu.o, sig2.o, a1, b1, a2, b2, Y)
+plot.mu <-          func_plotchain(df.chain, throw.out, 2, "$\\mu$")
+plot.sig2theta <-   func_plotchain(df.chain, throw.out, 3, "$\\sigma^2_{\\theta}$")
+plot.sig2epsilon <- func_plotchain(df.chain, throw.out, 4, "$\\sigma^2_{\\epsilon}$")
+plot.theta1 <-      func_plotchain(df.chain, throw.out, 5, "$\\theta_1$")
+plot.theta2 <-      func_plotchain(df.chain, throw.out, 6, "$\\theta_2$")
+plot.theta3 <-      func_plotchain(df.chain, throw.out, 7, "$\\theta_3$")
+plot.theta4 <-      func_plotchain(df.chain, throw.out, 8, "$\\theta_4$")
+plot.theta5 <-      func_plotchain(df.chain, throw.out, 9, "$\\theta_5$")
+plot.theta6 <-      func_plotchain(df.chain, throw.out, 10, "$\\theta_6$")
+
+gs <- list(  plot.mu
+              , plot.sig2theta
+              , plot.sig2epsilon
+              , plot.theta1
+              , plot.theta2
+              , plot.theta3
+              , plot.theta4
+              , plot.theta5
+              , plot.theta6)
+
+#gs <- list(plot.theta1, plot.theta2, plot.theta3)
+grid.arrange(grobs=gs, nrow=3, ncol=3
+             , top = textGrob(paste("Chains versus Iterations, throwing out first", throw.out,"values on", it, "chain"), vjust = .5, gp = gpar(fontface = "bold", cex = 1.2))
+            )
+}
+```
+
+Cannot use $a_1, b_1 = 0$, otherwise $\sigma^2_\theta = \infty$, resulting in N/A so will use 0.01 instead.  
+```{r p3bRESULT, fig.height=8}
+it <-75000
+#prior for mu
+mu.o <- 0
+sig2.o <- 10^12
+#prior for sig2.theta
+a1 <- .01
+b1 <- .01
+#prior for sig2.epsilon 
+a2 <- 1
+b2 <- 1
+
+Y <- cbind(j1, j2, j3, j4, j5, j6)
+startseed <- 32
+
+func_problem3b(startseed, it, mu.o, sig2.o, a1, b1, a2, b2, Y, 1000)
+```
+
+\newpage  
 ## Problem 3c 
 Repeat 3b using the prior specification $p(\mu) = \mathcal{N}(0, 10^{12})$, $p(\sigma_\epsilon^2) = IG(0, 0)$, and
-$p(\sigma^2_\theta) = IG(0, 0)$.  Does this specification violate the Hobart_Casella conditions?
+$p(\sigma^2_\theta) = IG(0, 0)$.  Does this specification violate the Hobart-Casella conditions? 
 Describe what happens to the Gibbs sampler chain in this case.  
 
+This violates the Hobart-Casella conditions.  If left at zero, the result will "blow up" (i.e., the chains are full of NA).  
+Cannot use $a_1, b_1, a_2, b_2 = 0$, otherwise $\sigma^2_\theta = \sigma^2_\epsilon  = \infty$, resulting in N/A so will use 0.01 instead.   
+```{r p3cRESULT, fig.height=8}
+it <-75000
+#prior for mu
+mu.o <- 0
+sig2.o <- 10^12
+#prior for sig2.theta
+a1 <- .01
+b1 <- .01
+#prior for sig2.epsilon 
+a2 <- .01
+b2 <- .01
+
+Y <- cbind(j1, j2, j3, j4, j5, j6)
+startseed <- 32
+
+func_problem3b(startseed, it, mu.o, sig2.o, a1, b1, a2, b2, Y, 1000)
+```
+
+\newpage 
 # Problem 5  
 Suppose that $X$ and $Y$ have exponential conditional distributions restricted over the interval $(0, B)$, i.e. 
 $p(x \mid y) \propto y \exp \left\{ -yx \right\}$ for $0 < x < B < \infty$ and 
