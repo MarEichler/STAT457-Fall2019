@@ -23,14 +23,14 @@ header-includes:
 geometry: "left=0.75in,right=0.75in,top=1.1in,bottom=1in" 
 
 ---
+
+\captionsetup[table]{labelformat=empty}
 ```{r setup, echo=FALSE, results="hide", warning=FALSE, message=FALSE}
 library(ggplot2) #ggplot
 library(readr) #import CSV
 library(gridExtra) #organize plots
 library(grid) #organize plots
 library(latex2exp) #latex in ggplot titles 
-library(matlib) #A = matrix, inv(A) = A^{-1} 
-library(numDeriv) #calculate numerical first and second order derivatives 
 library(gtable) #for tablegrob functions 
 #library(kableExtra) #for kable functions
 library(dplyr) #for piping 
@@ -42,19 +42,38 @@ dec <- 3
 #knitr::opts_chunk$set(echo=FALSE) #using knitr for this option but don't have to load 
 ```
 
+# Is my little brother a delinquent? 
+
+```{r Counts}
+alpha <-  c(127, 123, 93, 17) #most delinquent
+gamma <-  c(345, 209, 158, 65)  #least delinquent
+
+table <- rbind( alpha, gamma)
+rownames(table) <- c("Most Delinquent", "Least Delinquent")
+colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child")
+
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption="Raw Data") %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) 
+```
+Using the above data, we want to know if birth order affects delinquency in boys.  Looking at the raw data row proportions it appears that the oldest and only-child sons have a lower delinquency level, where as middle and youngest sons have a higher delinquency levels.   
 ```{r func_tableparam}
 #FUNCTION: PUT PARAMETERS INTO TABLE
 func_tableparam <- function(parameters, name){
-total <- c(sum(alpha), sum(gamma))
-diff <- c(alpha-gamma, sum(alpha-gamma))
-table <- rbind( cbind(parameters, total), diff)
+diff <- parameters[1,]- parameters[2,]
+table <- rbind( parameters, diff)
 rownames(table) <- c("Most Delinquent", "Least Delinquent", "Difference (Most - Least)")
-colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child", "Total")
-
-knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption=paste("Dirichlet Parameters:", name)) %>%
+colnames(table) <- c("Oldest", "In-between", "Youngest", "Only Child")
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption=paste(name)) %>%
   kableExtra::kable_styling(latex_options="hold_position" ) 
 }
+
+func_tableparam(rbind(alpha/sum(alpha), gamma/sum(gamma)), "Row Proportions")
 ```
+
+
+\newpage 
+## Bayesian
+
 
 ```{r func_values}
 #FUNCTION: RETURN IT, MEAN, CI, AND PVALUE 
@@ -63,21 +82,22 @@ func_values <- function(vec){
   CI.val <- decimal(quantile(vec, c(0.025, 0.975)), dec)
   CI.95 <- paste("(", paste(CI.val, collapse=", "), ")")
   mean <- decimal(mean(vec), dec)
-  pval <- length(vec[vec > 0])/it 
+  pval <- decimal(min(length(vec[vec > 0])/it, 1 - length(vec[vec > 0])/it), dec)
   vec <- c(it, mean, CI.95, pval)
   vec
 }
 ```
 ```{r func_delinq}
 #FUNCTION: SIMIULATE VALUES 
-func_delinq <- function(it){
+func_delinq <- function(it, alpha, gamma){
 set.seed(050104)
-prop <- rdirichlet(it, t(parameters))
+prop.alpha <- rdirichlet(it, alpha)
+prop.gamma <- rdirichlet(it, gamma)
 diff <- cbind( #most - least
-   prop[,1] - prop[,5] #diff for Oldest
-  ,prop[,2] - prop[,6] #diff for in-between
-  ,prop[,3] - prop[,7] #diff for youngest
-  ,prop[,4] - prop[,8] #diff for only-child
+   prop.alpha[,1] - prop.gamma[,1] #diff for Oldest
+  ,prop.alpha[,2] - prop.gamma[,2] #diff for in-between
+  ,prop.alpha[,3] - prop.gamma[,3] #diff for youngest
+  ,prop.alpha[,4] - prop.gamma[,4] #diff for only-child
    )
 apply(diff, 2, func_values)
 }
@@ -86,16 +106,18 @@ apply(diff, 2, func_values)
 #FUNCTION: put into a table 
 func_table <- function(i, name, it.1, it.2, it.3){
 table <- cbind(it.1[,i], it.2[,i] , it.3[,i])
-rownames(table) <- c("Iterations", "Mean", "95% CI", "P(diff>0)")
+rownames(table) <- c("Iterations", "Mean", "95% CI", "pval")
 title <- paste("Difference in Proportion for", name, ": Most Delinquent - Least Delinquent")
-table
+
+knitr::kable(table, booktabs=TRUE, 'latex', digits=dec, caption=paste(title)) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) 
 }
 ```
 ```{r func_chisq}
 #FUNCTION: CHI SQUARE - COMBINING P-VALUES 
 func_pval.chisq <- function(pvals){
   x <- -2*sum(log(as.numeric(pvals)))
-  combined.pval <-  pchisq(x, 2*length(pvals))
+  combined.pval <-  1- pchisq(x, 2*length(pvals))
 }
 ```
 ```{r func_combinedpval}
@@ -105,66 +127,66 @@ pvals.matrix <- cbind(  as.numeric(it.1[4,])
                       , as.numeric(it.2[4,])
                       , as.numeric(it.3[4,])
 )
-#pvals.matrix <- matrix(1, nrow=dim(pvals.matrix)[1], ncol=dim(pvals.matrix)[2]) - pvals.matrix 
 
 combined <- apply(pvals.matrix, 2, func_pval.chisq)
-combined.pvals <- rbind(it.vec, decimal(combined, dec))
+combined.pvals <- rbind(it.vec, decimal(combined, 10))
 rownames(combined.pvals) <- c("Iterations", "Combined p-value")
 
 title <- paste("Combined p-values:","$X = -2\\sum_{i=1}^4(p_i) \\sim \\chi^2_{df=8}$")
-combined.pvals 
+knitr::kable(combined.pvals, booktabs=TRUE, 'latex', caption=paste(title)) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) 
 }
 ```
-```{r func_alltogethernow}
-func_alltogheternow <- function(it.vec, parameters){
+```{r bayesRESULTS}
 
-it1 <- func_delinq(it.vec[1])
-it2 <- func_delinq(it.vec[2])
-it3 <- func_delinq(it.vec[3])
-
-table1 <- func_table(1, "Oldest", it1, it2, it3)
-table2 <- func_table(2, "In-Between", it1, it2, it3)
-table3 <- func_table(3, "Youngest", it1, it2, it3)
-table4 <- func_table(4, "Only", it1, it2, it3)
-comb.pval <- func_combinedpval(it1, it2, it3)
-return(list(table1, table2, table3, table4, comb.pval))
-}
-```
-
-
-## Parameters are Counts 
-```{r Counts}
 it.vec <- c(1e04, 1e05, 1e06)
-alpha <-  c(127, 123, 93, 17) #most delinquent
-gamma <-  c(345, 209, 158, 65)  #least delinquent
+it1 <- func_delinq(it.vec[1], alpha, gamma)
+it2 <- func_delinq(it.vec[2], alpha, gamma)
+it3 <- func_delinq(it.vec[3], alpha, gamma)
+
+func_table(1, "Oldest", it1, it2, it3)
+func_table(2, "In-Between", it1, it2, it3)
+func_table(3, "Youngest", it1, it2, it3)
+func_table(4, "Only", it1, it2, it3)
+func_combinedpval(it1, it2, it3)
+```
+Using simulations, the results support the hypothesis that delinquency levels are higher in middle and younger sons but lower in oldest and only sons.  
+
+\newpage 
+## Frequentest Tests
+### Proportion Test for Specific Birth Order 
+
+```{r func_proptest}
+func_proptest <- function(c, alt, name){
+table2x2 <- matrix(c(alpha[c], sum(alpha), gamma[c], sum(gamma)), nrow=2, byrow=TRUE)
+test <- prop.test(table2x2, alternative=alt)
+X.squared <- decimal(test$statistic, dec)
+p.value <- decimal(test$p.value, dec)
+alternative <- test$alternative
+results <- cbind(X.squared, p.value, alternative)
+rownames(results) <-c("")
+title <- paste("Difference in Proportion for", name, ": Most Delinquent - Least Delinquent")
+knitr::kable(results, booktabs=TRUE, 'latex', caption=paste(title)) %>%
+  kableExtra::kable_styling(latex_options="hold_position" ) 
+}
+```
+
+```{r freqRESULTS1}
+func_proptest(1, 'less',"Only")
+func_proptest(2, 'greater',"Only")
+func_proptest(3, 'greater',"Only")
+func_proptest(4, 'less',"Only")
+```
+
+
+
+### Chi-Sq test for Independence 
+```{r freqRESULTS2}
 parameters <- rbind(alpha, gamma)
 chisq.test(parameters)
-func_tableparam(parameters, "Counts")
-func_alltogheternow(it.vec, parameters)
-
 ```
 
-\newpage 
-## Parameters are Row Proportions 
-```{r RowProp}
-it.vec <- c(1e04, 1e05, 1e06)
-alpha <-  c(127, 123,  93, 17) /360 #most delinquent
-gamma <-  c(345, 209, 158, 65)/777  #least delinquent
-parameters <- rbind(alpha, gamma)
-func_tableparam(parameters, "Row Proportions")
-func_alltogheternow(it.vec, parameters)
-```
+Using traditional frequentest test, the results are the same: delinquency levels are higher in middle and younger sons but lower in oldest and only sons.  
 
-\newpage 
-## Parameters are Normalized (Row Proportions/2 - so some of all prop = 1) 
-```{r Normalized}
-it.vec <- c(1e04, 1e05, 1e06)
-alpha <- .5* c(127, 123,  93, 17) /360 #most delinquent
-gamma <- .5 * c(345, 209, 158, 65) /777 #least delinquent
-parameters <- rbind(alpha, gamma)
-func_tableparam(parameters, "Normalized")
-func_alltogheternow(it.vec, parameters)
-```
-
-
-
+## Conclusion
+Using the data provided, there is strong evidence that younger sons are more likely to be a delinquent.  So even though my brother is not is a delinquent, there is a higher probably that he will become one.  
