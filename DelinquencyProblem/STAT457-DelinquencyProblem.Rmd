@@ -190,3 +190,10 @@ Using traditional frequentest test, the results are the same: delinquency levels
 
 ## Conclusion
 Using the data provided, there is strong evidence that younger sons are more likely to be a delinquent.  So even though my brother is not is a delinquent, there is a higher probably that he will become one.  
+
+
+```{r}
+#PRINTING THE CODE
+#knitr::stitch("HW06.Rmd") to go to latex
+knitr::stitch(   script="STAT457-DelinquencyProblem.Rmd"  , system.file("misc", "knitr-template.Rhtml", package="knitr")) #code to HTML
+```
