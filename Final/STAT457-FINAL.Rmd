@@ -776,12 +776,137 @@ $p(y \mid x) \propto x \exp \left\{ -xy \right\}$ for $0 < y < B < \infty$, wher
 ## Problem 5a  
 Take $m=1$ and $B=3$.  Run the data augmentation algorithm using these conditionals.
 (Hist: Reject the exponential deviates that lie outside $(0, B)$).
-How did you assess convergence of this chain? 
 Obtain the marginal for $x$ using the mixture of conditionals $p(x \mid y)$, mixed over the simulated $y$ deviates in your chain.  
+
+```{r p5.func_gibbs.prob5A}
+func_gibbs.p5 <- function(B, it){
+  x <- c(rep(B+1, it))
+  y <- c(rep(B+1, it))
+  x[1] <- runif(1, 0, B)
+  y[1] <- runif(1, 0, B)
+  for(k in 2:it) {
+    while(x[k] > B){ x[k]<-rexp(1,y[k-1]) }
+    while(y[k] > B){ y[k]<-rexp(1,x[k-1]) }
+  }
+  df <- as.data.frame(cbind(x, y))
+return(df)
+}
+
+marginal <- function(k, rate){
+  (1-exp(-rate*k))/(k)
+}
+
+func_marginal <- function(k, rate){
+  marginal(k, rate)/rate #to normalize to 0 to 1
+}
+
+func_problem5A <- function(startseed, B, it){
+  set.seed(startseed)
+  df <- func_gibbs.p5(B, it)
+
+true.cdf <-stat_function(fun = func_marginal, args = B, lwd = 1, linetype="solid", col="maroon")
+
+plot.x <- ggplot(df, aes(x)) + xlim(0, B)+
+  geom_histogram(aes(y=..density..), alpha=0.4) + 
+  true.cdf +xlab("X Chain Values")+
+  ggtitle("Marginal of X: Histogram and True Curve")
+
+plot.y <- ggplot(df, aes(y)) + xlim(0, B)+
+  geom_histogram(aes(y=..density..), alpha=0.4) + 
+  true.cdf +xlab("Y Chain Values")+
+  ggtitle("Marginal of Y: Histogram and True Curve")
+
+grid.arrange(plot.x, plot.y, nrow=1)
+
+}
+```
+
+
+```{r p5aRESULTS, message=FALSE, warning=FALSE}
+func_problem5A(510, 3, 100000)
+```
+
+
 
 ## Problem 5b  
 Show that the marginal for $x$ is proportional to $(1 - \exp\left\{ -Bx \right\})/x$.
 Compare your results in 5a to this curve.  
+
+$$
+\begin{aligned}
+p_{X \mid Y}(x \mid y) & = ye^{-yx}
+\\
+p_{X}(x) & \propto \int_{0}^B e^{-yx} dy 
+\\[0.5ex]
+& = \frac{1}{x} \int_{0}^B xe^{-xy} dy 
+\\[0.5ex]
+& = \frac{1}{x} \Big[ - e^{-xy}
+\Big]_{y=0}^{y=B} 
+\\[0.5ex]
+& = \frac{1}{x} \Big(
+\left[ -e^{-Bx} \right]  - \left[ -e^{-0 \cdot x} \right] 
+\Big)
+\\[0.5ex]
+& = \frac{1}{x} \Big( - e^{-Bx} + 1 \Big) 
+\\[0.5ex]
+& = \frac{ 1 - e^{-Bx} }{x}
+\\[1.5ex]
+p_{X}(x) & \propto \frac{ 1 - e^{-Bx} }{x}
+\end{aligned}
+$$
  
+See above for the histogram of the marginals with the curves.  Note the curves are normalized by dividing by $B$ so that both the histogram density and the curve are on scale of 0 to 1.  The curve matches the histogram very well.  
+
+
+\newpage   
 ## Problem 5c 
 Repeat 5a and 5b using $B= \infty$.  Describe what happens.  Is the marginal for $x$ a proper density in this case?  
+
+$$
+\lim_{B \to \infty} \frac{ 1 - e^{-Bx} }{x} = \frac{ 1 - \lim_{B \to \infty} e^{-Bx}}{x}  = \frac{1}{x} 
+$$
+
+This is not a proper marginal.   
+$$
+\int_{0}^B \frac{1}{x} dx = \ln(x) \Big|_{0}^B = \ln(B) - \ln(0) = \ln(B) + \infty = \infty
+$$
+
+
+```{r p5.func_prob5B}
+
+func_margInfty <- function(k, B){
+  scales::rescale(marginal(k, B), to=c(0, 1/B))
+}
+
+func_problem5C <- function(startseed, B, it){
+  set.seed(startseed)
+  df <- func_gibbs.p5(B, it)
+
+true.cdf <-stat_function(fun = func_margInfty, args = B, lwd = 1, linetype="solid", col="maroon")
+
+plot.x <- ggplot(df, aes(x)) + 
+  xlim(0, B)+
+  ylim(0, 1/B)+
+  geom_histogram(aes(y=..density..), alpha=0.4) + 
+  true.cdf +
+  xlab("X Chain Values")+
+  ggtitle("Marginal of X: Histogram and True Curve")
+
+plot.y <- ggplot(df, aes(y)) +
+  xlim(0, B)+
+  ylim(0, 1/B)+
+  geom_histogram(aes(y=..density..), alpha=0.4) + 
+  true.cdf +
+  xlab("Y Chain Values")+
+  ggtitle("Marginal of Y: Histogram and True Curve")
+
+grid.arrange(plot.x, plot.y, nrow=1)
+
+}
+```
+
+
+```{r p5RESULTS, message=FALSE, warning=FALSE}
+func_problem5C(530, 1e08, 100000)
+```
+

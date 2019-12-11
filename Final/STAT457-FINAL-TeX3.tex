@@ -142,4 +142,35 @@ b_1 + \frac{1}{2} \sum_{i=1}^K  (\theta_i - \mu)^2
 \right)
 \end{align*}
 
+
+\newpage 
+\section*{Problem 5b} 
+
+\begin{align*}
+p_{X \mid Y}(x \mid y) & = ye^{-yx}
+\\
+p_{X}(x) & \propto \int_{0}^B e^{-yx} dy 
+\\[0.5ex]
+& = \frac{1}{x} \int_{0}^B xe^{-xy} dy 
+\\[0.5ex]
+& = \frac{1}{x} \Big[ - e^{-xy}
+\Big]_{y=0}^{y=B} 
+\\[0.5ex]
+& = \frac{1}{x} \Big(
+\left[ -e^{-Bx} \right]  - \left[ -e^{-0 \cdot x} \right] 
+\Big)
+\\[0.5ex]
+& = \frac{1}{x} \Big( - e^{-Bx} + 1 \Big) 
+\\[0.5ex]
+& = \frac{ 1 - e^{-Bx} }{x}
+\\[1.5ex]
+p_{X}(x) & \propto \frac{ 1 - e^{-Bx} }{x}
+\end{align*}
+
+
+
+\section*{Problem 5c} 
+\begin{align*}
+\lim_{B \to \infty} \frac{ 1 - e^{-Bx} }{x} = \frac{ 1 - \lim_{B \to \infty} e^{-Bx}}{x}  = \frac{1}{x} 
+\end{align*}
  \end{document}
