@@ -39,7 +39,6 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 4)
 knitr::opts_chunk$set(echo=FALSE)
 decimal <- function(x, k) trimws(format(round(x, k), nsmall=k))
 dec <- 5
-knitr::opts_chunk$set(eval=FALSE) 
 ```
 
 \newpage  
@@ -184,6 +183,7 @@ func_problem1AB(125, Y.B, 5)
 ```
 There is a lack of fit for the data in 1b, where the fit appears to be better for data in 1a. Convergence was assessed when values were had a difference less than $10^{-7}$.   
 
+
 \newpage
 ## Problem 1c   
 ```{r p1.func_chaininfo}
@@ -218,7 +218,6 @@ paste(decimal(avg.of.se, dec+1), "is the average of the standard errors of the 2
 ```
 
 You would expected these values to be similar but it appears that our standard error average is under-estimating the variation in the chain means of $\theta$ in this case.  
-
 
 \newpage  
 # Problem 2  
@@ -859,6 +858,7 @@ See above for the histogram of the marginals with the curves.  Note the curves a
 
 
 \newpage   
+
 ## Problem 5c 
 Repeat 5a and 5b using $B= \infty$.  Describe what happens.  Is the marginal for $x$ a proper density in this case?  
 
@@ -910,3 +910,8 @@ grid.arrange(plot.x, plot.y, nrow=1)
 func_problem5C(530, 1e08, 100000)
 ```
 
+```{r PRINTCODE}
+#PRINTING THE CODE
+#knitr::stitch("HW06.Rmd") to go to latex
+#knitr::stitch(   script="STAT457-FINAL.Rmd"  , system.file("misc", "knitr-template.Rhtml", package="knitr")) #code to HTML
+```
